@@ -2,6 +2,7 @@ package dev.vatn.plugins.auth;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.vatn.api.VHttpFilter;
 import dev.vatn.api.VHttpRequest;
 import dev.vatn.api.VHttpResponse;
 import dev.vatn.api.VHttpRoutes;
@@ -84,8 +85,11 @@ public class AuthPlugin implements VNodePlugin {
         ctx.registerService(AuthService.class, authService);
         log.debug("AuthService registered in VNodeContext");
 
+        ctx.registerFilter(new AuthFilter(authService));
+        log.debug("AuthFilter registered in VNodeContext");
+
         ctx.register("/auth", new AuthHttpService());
-        log.info("{} initialized — routes registered at /auth", PLUGIN_NAME);
+        log.info("{} initialized — routes registered at /auth, filter active at order {}", PLUGIN_NAME, VHttpFilter.AUTH);
     }
 
     @Override
@@ -149,21 +153,13 @@ public class AuthPlugin implements VNodePlugin {
     }
 
     private void handleMe(VHttpRequest req, VHttpResponse res) throws Exception {
-        String authHeader = req.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            res.status(401).sendJson(errorJson("Authorization header missing or malformed"));
+        AuthContext ctx = req.getAttribute(AuthFilter.AUTH_ATTRIBUTE, AuthContext.class)
+                .orElse(null);
+        if (ctx == null) {
+            res.status(401).sendJson(errorJson("Authorization required"));
             return;
         }
-
-        String token = authHeader.substring("Bearer ".length()).trim();
-
-        try {
-            AuthContext ctx = authService.authenticate(token);
-            res.sendJson(mapper.writeValueAsString(authContextToMap(ctx)));
-        } catch (AuthenticationException e) {
-            log.debug("Token authentication failed: {}", e.getMessage());
-            res.status(401).sendJson(errorJson("Invalid or expired token"));
-        }
+        res.sendJson(mapper.writeValueAsString(authContextToMap(ctx)));
     }
 
     // -------------------------------------------------------------------------
