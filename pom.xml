@@ -17,6 +17,11 @@
         <module>vatn-plugin-security</module>
         <module>vatn-plugin-indexer</module>
         <module>vatn-plugin-scraper</module>
+        <module>vatn-plugin-openai</module>
+        <module>vatn-plugin-metrics</module>
+        <module>vatn-plugin-postgres</module>
+        <module>vatn-plugin-email</module>
+        <module>vatn-plugin-slack</module>
     </modules>
 
     <properties>
@@ -26,6 +31,10 @@
         <jjwt.version>0.12.6</jjwt.version>
         <jackson.version>2.16.1</jackson.version>
         <slf4j.version>2.0.12</slf4j.version>
+        <micrometer.version>1.12.4</micrometer.version>
+        <hikari.version>5.1.0</hikari.version>
+        <postgresql.version>42.7.3</postgresql.version>
+        <angus-mail.version>2.0.3</angus-mail.version>
     </properties>
 
     <dependencyManagement>
@@ -68,6 +77,34 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+
+            <!-- Micrometer Prometheus -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>${micrometer.version}</version>
+            </dependency>
+
+            <!-- HikariCP connection pool -->
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${hikari.version}</version>
+            </dependency>
+
+            <!-- PostgreSQL JDBC driver -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+
+            <!-- Jakarta Mail (Angus reference implementation) -->
+            <dependency>
+                <groupId>org.eclipse.angus</groupId>
+                <artifactId>angus-mail</artifactId>
+                <version>${angus-mail.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
