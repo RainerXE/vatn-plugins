@@ -22,6 +22,13 @@
         <module>vatn-plugin-postgres</module>
         <module>vatn-plugin-email</module>
         <module>vatn-plugin-slack</module>
+        <module>vatn-plugin-cors</module>
+        <module>vatn-plugin-bcrypt</module>
+        <module>vatn-plugin-redis</module>
+        <module>vatn-plugin-swagger</module>
+        <module>vatn-plugin-s3</module>
+        <module>vatn-plugin-mongodb</module>
+        <module>vatn-plugin-activitypub</module>
     </modules>
 
     <properties>
@@ -35,6 +42,10 @@
         <hikari.version>5.1.0</hikari.version>
         <postgresql.version>42.7.3</postgresql.version>
         <angus-mail.version>2.0.3</angus-mail.version>
+        <bcrypt.version>0.10.2</bcrypt.version>
+        <jedis.version>5.1.0</jedis.version>
+        <awssdk.version>2.25.60</awssdk.version>
+        <mongodb.version>5.1.0</mongodb.version>
     </properties>
 
     <dependencyManagement>
@@ -105,6 +116,39 @@
                 <groupId>org.eclipse.angus</groupId>
                 <artifactId>angus-mail</artifactId>
                 <version>${angus-mail.version}</version>
+            </dependency>
+
+            <!-- BCrypt -->
+            <dependency>
+                <groupId>at.favre.lib</groupId>
+                <artifactId>bcrypt</artifactId>
+                <version>${bcrypt.version}</version>
+            </dependency>
+
+            <!-- Redis (Jedis) -->
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>${jedis.version}</version>
+            </dependency>
+
+            <!-- AWS SDK S3 -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>s3</artifactId>
+                <version>${awssdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>url-connection-client</artifactId>
+                <version>${awssdk.version}</version>
+            </dependency>
+
+            <!-- MongoDB -->
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${mongodb.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
