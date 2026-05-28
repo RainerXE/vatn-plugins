@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * VHttpFilter that adds CORS response headers and handles OPTIONS preflight requests.
- * Runs at order 150 — after tracing (100) but before security headers (200).
+ * Runs at order {@link VHttpFilter#CORS} (150) — after tracing (100) but before security headers (200).
  */
 public class CorsFilter implements VHttpFilter {
 
@@ -20,7 +20,7 @@ public class CorsFilter implements VHttpFilter {
     }
 
     @Override
-    public int order() { return 150; }
+    public int order() { return VHttpFilter.CORS; }
 
     @Override
     public void doFilter(VHttpRequest req, VHttpResponse res, VFilterChain chain) throws Exception {
