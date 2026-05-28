@@ -48,6 +48,7 @@ Each plugin implements `VNodePlugin` and is registered with `VNodeRunner.addPlug
 |--------|----------|--------------|
 | [vatn-plugin-slack](vatn-plugin-slack/) | `vatn-plugin-slack` | Slack notifications via Incoming Webhook. Registers `SlackService` with `notify(message)`. Stateless — no persistent connection. |
 | [vatn-plugin-comm](vatn-plugin-comm/) | `vatn-plugin-comm` | **Messaging sidecar hub** for Telegram, Signal, and RCS. Each channel runs as a `VAgent` with optional active-passive failover. Unified `CommService` API for send/receive across all channels. See below. |
+| [vatn-plugin-terminalphone](vatn-plugin-terminalphone/) | `vatn-plugin-terminalphone` | **Anonymous E2E-encrypted voice and text over Tor.** Record-and-send voice clips, encrypted text messaging, and a zero-knowledge group relay — all routed through `.onion` addresses. Inspired by [TerminalPhone](https://gitlab.com/here_forawhile/terminalphone). See below. |
 
 ### Protocols
 
@@ -151,6 +152,50 @@ comm.send(OutboundMessage.text(CommChannel.TELEGRAM, chatId, "Alert: pipeline fa
 ```
 
 See [vatn-plugin-comm/README.md](vatn-plugin-comm/README.md) for full documentation including Signal sidecar setup, RCS provider config, and the twin pattern for load-balanced webhook receivers.
+
+---
+
+## Plugin detail: vatn-plugin-terminalphone
+
+A VATN-native port of [TerminalPhone](https://gitlab.com/here_forawhile/terminalphone) by *here_forawhile* — a self-contained Bash walkie-talkie that runs entirely over Tor. The plugin replicates the same security model on the JVM: record a complete voice clip, encrypt it with AES-256-CBC and sign it with HMAC-SHA256, then deliver it through the Tor SOCKS5 proxy to a peer's `.onion` address. No accounts, no servers, no cleartext.
+
+```java
+VNodeRunner.create(8080)
+    .addPlugin(new TerminalPhonePlugin(
+        TerminalPhoneConfig.builder("exchange-this-secret-out-of-band")
+            .cipher("AES-256-CBC")
+            .torPort(9050)
+            .listenPort(54321)
+            .hmacSigning(true)
+            .build()
+    ))
+    .addPlugin(new MyPlugin())
+    .start();
+```
+
+In your plugin, get `TerminalPhoneService` from context:
+
+```java
+TerminalPhoneService phone = ctx.getService(TerminalPhoneService.class).orElseThrow();
+
+// Share your address with the peer (scan the QR out-of-band)
+System.out.println(phone.getQrCode());
+
+// Wire up handlers
+phone.onCallConnected(peer -> log.info("Connected to {}", peer));
+phone.onTextMessage(msg   -> log.info(">> {}", msg));
+phone.onVoiceMessage(pcm  -> phone.playVoice(pcm));
+
+// Dial and talk
+phone.call("abc123.onion");
+byte[] clip = phone.recordVoice(3_000);  // 3s push-to-talk
+phone.sendVoice(clip);
+phone.sendText("On my way.");
+```
+
+Group calls are supported via **relay mode** — a second listener forwards encrypted frames between callers without decrypting them (zero-knowledge relay). Enable with `.relayMode(true)`.
+
+See [vatn-plugin-terminalphone/README.md](vatn-plugin-terminalphone/README.md) for the full security model, configuration reference, and HTTP endpoint documentation.
 
 ---
 

@@ -31,6 +31,7 @@
         <module>vatn-plugin-activitypub</module>
         <module>vatn-plugin-comm</module>
         <module>vatn-plugin-admin</module>
+        <module>vatn-plugin-terminalphone</module>
     </modules>
 
     <properties>
