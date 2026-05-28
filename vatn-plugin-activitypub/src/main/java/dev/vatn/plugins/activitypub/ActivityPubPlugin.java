@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.vatn.api.VNodeContext;
 import dev.vatn.api.VNodePlugin;
+import dev.vatn.api.workflow.VClaimOptions;
+import dev.vatn.api.workflow.VNamedQueue;
+import dev.vatn.api.workflow.VQueueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,8 +14,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.security.PrivateKey;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -45,6 +50,7 @@ public class ActivityPubPlugin implements VNodePlugin {
     private final Set<String> followers = Collections.synchronizedSet(new LinkedHashSet<>());
     private PrivateKey privateKey;
     private HttpClient httpClient;
+    private VNamedQueue outboxQueue;
 
     public ActivityPubPlugin(ActivityPubConfig config) {
         this.config = config;
@@ -59,22 +65,25 @@ public class ActivityPubPlugin implements VNodePlugin {
         privateKey = config.loadPrivateKey();
         httpClient = HttpClient.newHttpClient();
 
+        // Use VQueueService for reliable outbox delivery with retry, if available
+        Optional<VQueueService> queueSvcOpt = ctx.getService(VQueueService.class);
+        if (queueSvcOpt.isPresent()) {
+            outboxQueue = queueSvcOpt.get().queue("ap.outbox",
+                VClaimOptions.defaults().withMaxAttempts(5).withBackoff(Duration.ofSeconds(30)));
+            outboxQueue.consume("ap.outbox.worker", job -> {
+                JsonNode envelope = mapper.readTree(job.payload());
+                doSendActivity(envelope.get("inbox").asText(), envelope.get("body").asText());
+            });
+            log.info("ActivityPub outbox queue enabled — deliveries will be retried up to 5 times");
+        }
+
         ActivityPubService service = new ActivityPubService() {
             @Override public String getActorUrl()     { return config.getActorUrl(); }
             @Override public String getPublicKeyPem() { return config.getPublicKeyPem(); }
 
             @Override
             public void sendActivity(String targetInbox, String activityJson) {
-                try {
-                    var req = HttpSignatureUtil.buildSignedPost(
-                            URI.create(targetInbox), activityJson, config.getKeyId(), privateKey);
-                    var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-                    if (resp.statusCode() >= 400) {
-                        log.warn("sendActivity to {} returned {}", targetInbox, resp.statusCode());
-                    }
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to deliver activity to " + targetInbox, e);
-                }
+                doSendActivity(targetInbox, activityJson);
             }
         };
         ctx.registerService(ActivityPubService.class, service);
@@ -161,6 +170,21 @@ public class ActivityPubPlugin implements VNodePlugin {
         );
     }
 
+    private void doSendActivity(String targetInbox, String activityJson) {
+        try {
+            var req = HttpSignatureUtil.buildSignedPost(
+                    URI.create(targetInbox), activityJson, config.getKeyId(), privateKey);
+            var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() >= 400) {
+                throw new RuntimeException("HTTP " + resp.statusCode() + " from " + targetInbox);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deliver activity to " + targetInbox, e);
+        }
+    }
+
     private void sendAccept(JsonNode originalActivity, String targetActorUrl, ActivityPubService service) {
         Thread.ofVirtual().start(() -> {
             try {
@@ -172,8 +196,15 @@ public class ActivityPubPlugin implements VNodePlugin {
                       .put("type",     "Accept")
                       .put("actor",    config.getActorUrl())
                       .set("object",   originalActivity);
+                String body = mapper.writeValueAsString(accept);
 
-                service.sendActivity(inboxUrl, mapper.writeValueAsString(accept));
+                if (outboxQueue != null) {
+                    String envelope = mapper.writeValueAsString(
+                        mapper.createObjectNode().put("inbox", inboxUrl).put("body", body));
+                    outboxQueue.enqueue(envelope);
+                } else {
+                    service.sendActivity(inboxUrl, body);
+                }
             } catch (Exception e) {
                 log.warn("Failed to send Accept to {}: {}", targetActorUrl, e.getMessage());
             }

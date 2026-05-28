@@ -6,7 +6,7 @@
 
     <groupId>dev.vatn.plugins</groupId>
     <artifactId>vatn-plugins-parent</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0-alpha.9</version>
     <packaging>pom</packaging>
 
     <name>VATN Plugins Parent</name>
@@ -36,7 +36,7 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vatn.version>1.0-SNAPSHOT</vatn.version>
+        <vatn.version>1.0-alpha.9</vatn.version>
         <jjwt.version>0.12.6</jjwt.version>
         <jackson.version>2.16.1</jackson.version>
         <slf4j.version>2.0.12</slf4j.version>

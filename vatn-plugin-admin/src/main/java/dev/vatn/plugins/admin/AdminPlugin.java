@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.management.*;
+import java.sql.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -195,6 +196,17 @@ public class AdminPlugin implements VNodePlugin {
                 if (!authorized(req, res)) return;
                 sendJson(res, collectJvmData());
             });
+
+            // ── queues ────────────────────────────────────────────────────────
+            routes.get("/api/queues", (req, res) -> {
+                if (!authorized(req, res)) return;
+                Optional<VPersistenceService> dbOpt = ctx.getService(VPersistenceService.class);
+                if (dbOpt.isEmpty() || ctx.getService(VQueueService.class).isEmpty()) {
+                    sendJson(res, List.of());
+                    return;
+                }
+                sendJson(res, collectQueueStats(dbOpt.get()));
+            });
         });
 
         if (config.isAuthEnabled()) {
@@ -205,6 +217,42 @@ public class AdminPlugin implements VNodePlugin {
     }
 
     @Override public void onShutdown() {}
+
+    // ── Queue stats ───────────────────────────────────────────────────────────
+
+    private List<Map<String, Object>> collectQueueStats(VPersistenceService db) {
+        Map<String, Map<String, Object>> byQueue = new LinkedHashMap<>();
+        try (Connection conn = db.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "SELECT queue, state, COUNT(*) AS cnt FROM vatn_named_queue_jobs " +
+                "GROUP BY queue, state ORDER BY queue, state")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String qName = rs.getString("queue");
+                    String state = rs.getString("state");
+                    long   cnt   = rs.getLong("cnt");
+                    Map<String, Object> row = byQueue.computeIfAbsent(qName, k -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("name",    k);
+                        m.put("pending", 0L);
+                        m.put("claimed", 0L);
+                        m.put("done",    0L);
+                        m.put("dead",    0L);
+                        return m;
+                    });
+                    switch (state) {
+                        case "PENDING" -> row.put("pending", cnt);
+                        case "CLAIMED" -> row.put("claimed", cnt);
+                        case "DONE"    -> row.put("done",    cnt);
+                        case "DEAD"    -> row.put("dead",    cnt);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("collectQueueStats failed: {}", e.getMessage());
+        }
+        return new ArrayList<>(byQueue.values());
+    }
 
     // ── JVM data collection ───────────────────────────────────────────────────
 

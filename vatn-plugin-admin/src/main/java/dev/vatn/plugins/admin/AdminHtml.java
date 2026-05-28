@@ -116,7 +116,15 @@ final class AdminHtml {
     </div>
   </div>
 
-  <!-- Row 6: Routes -->
+  <!-- Row 6: Queues -->
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Named Queues</h2>
+    <div id="queues-body" class="text-xs">
+      <div class="h-4 bg-gray-800 rounded animate-pulse w-2/3"></div>
+    </div>
+  </div>
+
+  <!-- Row 7: Routes -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
     <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Registered Routes</h2>
     <div id="routes-body" class="text-xs">
@@ -423,6 +431,39 @@ async function loadWorkflows() {
     '</table>';
 }
 
+async function loadQueues() {
+  const d = await api('queues');
+  if (!d) return;
+  const el = document.getElementById('queues-body');
+  if (d.length === 0) {
+    el.innerHTML = '<span class="text-gray-600">No named queues found</span>';
+    return;
+  }
+  function qbadge(label, count, cls) {
+    return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${cls}">${label} <strong>${count}</strong></span>`;
+  }
+  const rows = d.map(q =>
+    '<tr class="border-b border-gray-800/50">' +
+      '<td class="py-1.5 pr-4 text-gray-300 font-mono">' + q.name + '</td>' +
+      '<td class="py-1.5 pr-3">' + qbadge('pending', q.pending, 'bg-blue-500/20 text-blue-300') + '</td>' +
+      '<td class="py-1.5 pr-3">' + qbadge('claimed', q.claimed, 'bg-yellow-500/20 text-yellow-300') + '</td>' +
+      '<td class="py-1.5 pr-3">' + qbadge('done', q.done, 'bg-green-500/20 text-green-400') + '</td>' +
+      '<td class="py-1.5">'       + qbadge('dead', q.dead, 'bg-red-500/20 text-red-400') + '</td>' +
+    '</tr>'
+  ).join('');
+  el.innerHTML =
+    '<table class="w-full">' +
+      '<thead><tr class="text-gray-600 text-left border-b border-gray-800">' +
+        '<th class="pb-2 pr-4 font-normal">Queue</th>' +
+        '<th class="pb-2 pr-3 font-normal">Pending</th>' +
+        '<th class="pb-2 pr-3 font-normal">Claimed</th>' +
+        '<th class="pb-2 pr-3 font-normal">Done</th>' +
+        '<th class="pb-2 font-normal">Dead</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
 async function loadRoutes() {
   const d = await api('routes');
   if (!d) return;
@@ -444,7 +485,7 @@ async function refreshAll() {
   try {
     await Promise.all([
       loadOverview(), loadHealth(), loadPlugins(),
-      loadAgents(), loadJvm(), loadWorkflows(), loadRoutes()
+      loadAgents(), loadJvm(), loadWorkflows(), loadQueues(), loadRoutes()
     ]);
   } finally {
     btn.classList.remove('spinning');
