@@ -29,6 +29,7 @@
         <module>vatn-plugin-s3</module>
         <module>vatn-plugin-mongodb</module>
         <module>vatn-plugin-activitypub</module>
+        <module>vatn-plugin-comm</module>
     </modules>
 
     <properties>
