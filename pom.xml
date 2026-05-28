@@ -30,6 +30,7 @@
         <module>vatn-plugin-mongodb</module>
         <module>vatn-plugin-activitypub</module>
         <module>vatn-plugin-comm</module>
+        <module>vatn-plugin-admin</module>
     </modules>
 
     <properties>
