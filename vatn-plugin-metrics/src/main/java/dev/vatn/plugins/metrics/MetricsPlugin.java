@@ -68,14 +68,13 @@ public class MetricsPlugin implements VNodePlugin {
         }
 
         ctx.registerService(MetricsService.class, () -> registry);
+        ctx.registerHealthCheck("metrics", () -> true);
 
         // Expose /metrics scrape endpoint
         ctx.register(config.getPath(), routes ->
-            routes.get("", (req, res) -> {
-                String scrape = registry.scrape();
-                res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
-                res.send(scrape);
-            })
+            routes.get("", (req, res) ->
+                res.header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+                   .send(registry.scrape()))
         );
 
         log.info("Metrics plugin initialized — scrape endpoint: {}", config.getPath());

@@ -29,6 +29,10 @@ public class MongoPlugin implements VNodePlugin {
     public void onInitialize(VNodeContext ctx) {
         service = new MongoServiceImpl(config);
         ctx.registerService(MongoService.class, service);
+        ctx.registerHealthCheck("mongodb", () -> {
+            service.database().runCommand(new org.bson.Document("ping", 1));
+            return true;
+        });
     }
 
     @Override

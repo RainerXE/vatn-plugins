@@ -94,8 +94,7 @@ public class ActivityPubPlugin implements VNodePlugin {
                                     .put("rel", "self")
                                     .put("type", ACTIVITY_JSON)
                                     .put("href", config.getActorUrl()))));
-            res.setHeader("Content-Type", "application/jrd+json");
-            res.send(json);
+            res.header("Content-Type", "application/jrd+json").send(json);
         }));
 
         // ── /ap routes ────────────────────────────────────────────────────────
@@ -116,8 +115,7 @@ public class ActivityPubPlugin implements VNodePlugin {
                    .put("owner",        config.getActorUrl())
                    .put("publicKeyPem", config.getPublicKeyPem());
 
-                res.setHeader("Content-Type", ACTIVITY_JSON);
-                res.send(mapper.writeValueAsString(actor));
+                res.header("Content-Type", ACTIVITY_JSON).send(mapper.writeValueAsString(actor));
             })
 
             .post("/inbox", (req, res) -> {
@@ -158,8 +156,7 @@ public class ActivityPubPlugin implements VNodePlugin {
                           .put("type",       "OrderedCollection")
                           .put("totalItems", 0);
                 collection.putArray("orderedItems");
-                res.setHeader("Content-Type", ACTIVITY_JSON);
-                res.send(mapper.writeValueAsString(collection));
+                res.header("Content-Type", ACTIVITY_JSON).send(mapper.writeValueAsString(collection));
             })
         );
     }

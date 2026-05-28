@@ -32,6 +32,7 @@ public class RedisPlugin implements VNodePlugin {
     public void onInitialize(VNodeContext ctx) {
         service = new JedisRedisService(config);
         ctx.registerService(RedisService.class, service);
+        ctx.registerHealthCheck("redis", () -> { service.exists("__vatn_hc"); return true; });
     }
 
     @Override

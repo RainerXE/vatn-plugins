@@ -53,19 +53,14 @@ public class SwaggerPlugin implements VNodePlugin {
 
         // /api-docs — serve the OpenAPI JSON
         ctx.register(specPath, routes ->
-            routes.get("", (req, res) -> {
-                res.setHeader("Content-Type", "application/json; charset=utf-8");
-                res.send(spec);
-            })
+            routes.get("", (req, res) ->
+                res.header("Content-Type", "application/json; charset=utf-8").send(spec))
         );
 
         // /docs — serve Swagger UI HTML (CDN-backed)
         String html = buildSwaggerHtml(specPath, config.getTitle());
         ctx.register(docsPath, routes ->
-            routes.get("", (req, res) -> {
-                res.setHeader("Content-Type", "text/html; charset=utf-8");
-                res.send(html);
-            })
+            routes.get("", (req, res) -> res.sendHtml(html))
         );
 
         log.info("Swagger UI available at {} — spec at {}", docsPath, specPath);

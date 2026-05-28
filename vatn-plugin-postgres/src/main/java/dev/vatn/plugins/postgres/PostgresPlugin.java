@@ -60,6 +60,10 @@ public class PostgresPlugin implements VNodePlugin {
 
         dataSource = new HikariDataSource(hikari);
         ctx.registerService(DataSourceService.class, () -> dataSource);
+        ctx.registerHealthCheck("postgres", () -> {
+            try (var conn = dataSource.getConnection()) { return conn.isValid(1); }
+            catch (java.sql.SQLException e) { return false; }
+        });
 
         log.info("PostgreSQL DataSource initialized — url={}, pool={}",
                 config.jdbcUrl(), config.getPoolSize());
