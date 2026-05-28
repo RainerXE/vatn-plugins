@@ -19,21 +19,13 @@ final class AdminHtml {
   <title>VATN Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .badge-primary  { @apply bg-green-500/20 text-green-400 border border-green-500/30; }
-    .badge-standby  { @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30; }
-    .badge-twin     { @apply bg-blue-500/20 text-blue-400 border border-blue-500/30; }
-    .badge-success  { @apply bg-green-500/20 text-green-400; }
-    .badge-failed   { @apply bg-red-500/20 text-red-400; }
-    .badge-running  { @apply bg-blue-500/20 text-blue-400; }
-    .badge-queued   { @apply bg-gray-500/20 text-gray-400; }
-    .badge-canceled { @apply bg-gray-500/20 text-gray-500; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinning { animation: spin 1s linear infinite; display: inline-block; }
   </style>
 </head>
 <body class="min-h-screen font-mono text-sm">
 
-<!-- ── Auth overlay ───────────────────────────────────────────────────── -->
+<!-- ── Auth overlay ──────────────────────────────────────────────────────── -->
 <div id="auth-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/95 hidden">
   <div class="bg-gray-900 border border-gray-700 rounded-xl p-8 w-96 shadow-2xl">
     <h2 class="text-lg font-semibold text-white mb-1">VATN Admin</h2>
@@ -48,32 +40,30 @@ final class AdminHtml {
   </div>
 </div>
 
-<!-- ── Top bar ──────────────────────────────────────────────────────────── -->
+<!-- ── Top bar ───────────────────────────────────────────────────────────── -->
 <header class="sticky top-0 z-40 bg-gray-900/80 backdrop-blur border-b border-gray-800 px-6 py-3 flex items-center gap-4">
-  <span class="text-blue-400 font-semibold tracking-tight">⬡ VATN Admin</span>
-  <span id="hdr-node"   class="text-gray-500 text-xs">—</span>
-  <span id="hdr-flavor" class="text-gray-600 text-xs">—</span>
-  <span id="hdr-uptime" class="text-gray-600 text-xs ml-auto">—</span>
+  <span class="text-blue-400 font-semibold tracking-tight">&#x2B21; VATN Admin</span>
+  <span id="hdr-node"   class="text-gray-500 text-xs">&#8212;</span>
+  <span id="hdr-flavor" class="text-gray-600 text-xs">&#8212;</span>
+  <span id="hdr-uptime" class="text-gray-600 text-xs ml-auto">&#8212;</span>
   <button onclick="refreshAll()" title="Refresh"
-          class="text-gray-400 hover:text-white transition text-base leading-none" id="refresh-btn">↺</button>
+          class="text-gray-400 hover:text-white transition text-base leading-none" id="refresh-btn">&#8634;</button>
 </header>
 
-<!-- ── Main grid ────────────────────────────────────────────────────────── -->
+<!-- ── Main grid ─────────────────────────────────────────────────────────── -->
 <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-  <!-- Row 1: Overview · Health · Plugins -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <!-- Row 1: Overview + Health -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-    <!-- Overview -->
     <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
       <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Node</h2>
-      <div id="overview-body" class="space-y-1">
+      <div id="overview-body" class="space-y-1 text-xs">
         <div class="h-4 bg-gray-800 rounded animate-pulse w-3/4"></div>
         <div class="h-4 bg-gray-800 rounded animate-pulse w-1/2"></div>
       </div>
     </div>
 
-    <!-- Health -->
     <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
       <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Health</h2>
       <div id="health-body" class="space-y-1 text-xs">
@@ -81,17 +71,17 @@ final class AdminHtml {
       </div>
     </div>
 
-    <!-- Plugins -->
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-      <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Plugins</h2>
-      <div id="plugins-body" class="space-y-1 text-xs">
-        <div class="h-4 bg-gray-800 rounded animate-pulse w-full"></div>
-      </div>
-    </div>
-
   </div>
 
-  <!-- Row 2: Agents -->
+  <!-- Row 2: Plugins (full width) -->
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Plugins</h2>
+    <div id="plugins-body" class="text-xs">
+      <div class="h-4 bg-gray-800 rounded animate-pulse w-full"></div>
+    </div>
+  </div>
+
+  <!-- Row 3: Agents -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
     <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Agents</h2>
     <div id="agents-body" class="text-xs">
@@ -99,7 +89,26 @@ final class AdminHtml {
     </div>
   </div>
 
-  <!-- Row 3: Workflows -->
+  <!-- Row 4: Memory + Performance -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Memory</h2>
+      <div id="jvm-memory-body" class="text-xs space-y-2">
+        <div class="h-4 bg-gray-800 rounded animate-pulse w-full"></div>
+      </div>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Performance</h2>
+      <div id="jvm-perf-body" class="text-xs space-y-2">
+        <div class="h-4 bg-gray-800 rounded animate-pulse w-full"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row 5: Workflows -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
     <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Workflow Runs</h2>
     <div id="workflows-body" class="text-xs">
@@ -107,7 +116,7 @@ final class AdminHtml {
     </div>
   </div>
 
-  <!-- Row 4: Routes -->
+  <!-- Row 6: Routes -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
     <h2 class="text-xs text-gray-500 uppercase tracking-wider mb-3">Registered Routes</h2>
     <div id="routes-body" class="text-xs">
@@ -145,7 +154,7 @@ document.getElementById('token-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') submitToken();
 });
 
-// ── fetch helper ──────────────────────────────────────────────────────────
+// ── fetch helpers ─────────────────────────────────────────────────────────
 async function api(path) {
   const headers = token ? { Authorization: 'Bearer ' + token } : {};
   const r = await fetch(BASE + '/api/' + path, { headers });
@@ -153,10 +162,18 @@ async function api(path) {
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
+async function apiPost(path) {
+  const headers = token
+    ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
+    : {};
+  const r = await fetch(BASE + '/api/' + path, { method: 'POST', headers });
+  if (r.status === 401) { showAuthOverlay(); return null; }
+  return r.json().catch(() => ({}));
+}
 
 // ── rendering helpers ─────────────────────────────────────────────────────
 function kv(label, value) {
-  return `<div class="flex justify-between gap-2">
+  return `<div class="flex justify-between gap-2 py-0.5">
     <span class="text-gray-500">${label}</span>
     <span class="text-gray-200 font-medium truncate">${value}</span>
   </div>`;
@@ -166,10 +183,19 @@ function badge(text, cls) {
 }
 function roleBadge(role) {
   if (role === 'PRIMARY') return badge('PRIMARY', 'bg-green-500/20 text-green-400 border border-green-500/30');
-  if (role === 'TWIN')    return badge('TWIN',    'bg-blue-500/20  text-blue-400  border border-blue-500/30');
+  if (role === 'TWIN')    return badge('TWIN',    'bg-blue-500/20 text-blue-400 border border-blue-500/30');
   return                         badge('STANDBY', 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30');
 }
-function stateBadge(state) {
+function pluginStateBadge(state) {
+  const map = {
+    RUNNING:    'bg-green-500/20 text-green-400 border border-green-500/30',
+    RESTARTING: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+    STOPPED:    'bg-gray-700 text-gray-400 border border-gray-600',
+    ERROR:      'bg-red-500/20 text-red-400 border border-red-500/30',
+  };
+  return badge(state, map[state] || 'bg-gray-700 text-gray-400');
+}
+function workflowStateBadge(state) {
   const map = {
     SUCCESS:  'bg-green-500/20 text-green-400',
     FAILED:   'bg-red-500/20 text-red-400',
@@ -178,6 +204,34 @@ function stateBadge(state) {
     CANCELED: 'bg-gray-700 text-gray-500',
   };
   return badge(state, map[state] || 'bg-gray-700 text-gray-400');
+}
+function progressBar(pct, colorClass) {
+  const safe = Math.min(100, Math.max(0, pct || 0));
+  const col  = colorClass || (safe > 85 ? 'bg-red-500' : safe > 65 ? 'bg-yellow-500' : 'bg-blue-500');
+  return `<div class="w-full bg-gray-800 rounded-full h-1.5 mt-1">
+    <div class="${col} h-1.5 rounded-full transition-all" style="width:${safe}%"></div>
+  </div>`;
+}
+
+// ── plugin actions ────────────────────────────────────────────────────────
+async function restartPlugin(id) {
+  const btn = document.getElementById('btn-restart-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    await apiPost('plugins/' + encodeURIComponent(id) + '/restart');
+    setTimeout(loadPlugins, 1500);
+  } catch(e) { console.error('restart failed', e); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = '\\u21BA'; } }
+}
+async function stopPlugin(id) {
+  if (!confirm('Stop plugin ' + id + '?')) return;
+  const btn = document.getElementById('btn-stop-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    await apiPost('plugins/' + encodeURIComponent(id) + '/stop');
+    setTimeout(loadPlugins, 500);
+  } catch(e) { console.error('stop failed', e); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = '\\u25A0'; } }
 }
 
 // ── section loaders ───────────────────────────────────────────────────────
@@ -188,12 +242,12 @@ async function loadOverview() {
   document.getElementById('hdr-flavor').textContent = d.flavor;
   document.getElementById('hdr-uptime').textContent = 'up ' + d.uptimeHuman;
   document.getElementById('overview-body').innerHTML = [
-    kv('Node ID',   `<span class="font-mono text-blue-300">${d.nodeId}</span>`),
-    kv('Flavor',    d.flavor),
-    kv('Uptime',    d.uptimeHuman),
-    kv('VATN',      d.vatnVersion),
-    kv('Plugins',   d.pluginCount),
-    kv('Agents',    d.agentCount),
+    kv('Node ID',  '<span class="font-mono text-blue-300">' + d.nodeId + '</span>'),
+    kv('Flavor',   d.flavor),
+    kv('Uptime',   d.uptimeHuman),
+    kv('VATN',     d.vatnVersion),
+    kv('Plugins',  d.pluginCount),
+    kv('Agents',   d.agentCount),
   ].join('');
 }
 
@@ -207,12 +261,13 @@ async function loadHealth() {
   }
   el.innerHTML = d.checks.map(c => {
     const dot = c.status === 'UP'
-      ? '<span class="text-green-400">●</span>'
+      ? '<span class="text-green-400">&#9679;</span>'
       : c.status === 'STANDBY'
-        ? '<span class="text-yellow-400">◐</span>'
-        : '<span class="text-red-400">●</span>';
-    return `<div class="flex items-center gap-2">${dot}<span class="text-gray-300">${c.name}</span>
-      <span class="ml-auto text-gray-500">${c.detail || c.status}</span></div>`;
+        ? '<span class="text-yellow-400">&#9680;</span>'
+        : '<span class="text-red-400">&#9679;</span>';
+    return '<div class="flex items-center gap-2">' + dot +
+      '<span class="text-gray-300">' + c.name + '</span>' +
+      '<span class="ml-auto text-gray-500">' + (c.detail || c.status) + '</span></div>';
   }).join('');
 }
 
@@ -224,12 +279,38 @@ async function loadPlugins() {
     el.innerHTML = '<span class="text-gray-600">No plugins registered</span>';
     return;
   }
-  el.innerHTML = d.map(p =>
-    `<div class="flex items-center gap-2">
-      <span class="text-gray-400 truncate">${p.id.replace('dev.vatn.plugins.','')}</span>
-      <span class="ml-auto text-gray-600 shrink-0">${p.version}</span>
-    </div>`
-  ).join('');
+  const ADMIN_ID = 'dev.vatn.plugins.admin';
+  const rows = d.map(p => {
+    const shortId   = p.id.replace('dev.vatn.plugins.', '');
+    const isStopped = p.state === 'STOPPED';
+    const isAdmin   = p.id === ADMIN_ID;
+    const stopDis   = (isStopped || isAdmin) ? ' disabled' : '';
+    return '<tr class="border-b border-gray-800/50">' +
+      '<td class="py-1.5 pr-4 text-gray-300 font-mono">' + shortId + '</td>' +
+      '<td class="py-1.5 pr-4 text-gray-400">' + p.name + '</td>' +
+      '<td class="py-1.5 pr-4 text-gray-600">' + p.version + '</td>' +
+      '<td class="py-1.5 pr-4">' + pluginStateBadge(p.state) + '</td>' +
+      '<td class="py-1.5 pr-4 text-red-400 max-w-xs truncate">' + (p.lastError || '') + '</td>' +
+      '<td class="py-1.5 whitespace-nowrap">' +
+        '<button id="btn-restart-' + p.id + '" onclick="restartPlugin(\'' + p.id + '\')" title="Restart"' +
+          ' class="text-yellow-400 hover:text-yellow-300 transition px-1.5 disabled:opacity-30">&#8634;</button>' +
+        '<button id="btn-stop-' + p.id + '" onclick="stopPlugin(\'' + p.id + '\')" title="Stop"' +
+          stopDis + ' class="text-red-400 hover:text-red-300 transition px-1.5 disabled:opacity-30">&#9632;</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  el.innerHTML =
+    '<table class="w-full">' +
+      '<thead><tr class="text-gray-600 text-left border-b border-gray-800">' +
+        '<th class="pb-2 pr-4 font-normal">ID</th>' +
+        '<th class="pb-2 pr-4 font-normal">Name</th>' +
+        '<th class="pb-2 pr-4 font-normal">Version</th>' +
+        '<th class="pb-2 pr-4 font-normal">State</th>' +
+        '<th class="pb-2 pr-4 font-normal">Error</th>' +
+        '<th class="pb-2 font-normal">Actions</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
 }
 
 async function loadAgents() {
@@ -240,23 +321,74 @@ async function loadAgents() {
     el.innerHTML = '<span class="text-gray-600">No agents registered</span>';
     return;
   }
-  el.innerHTML = `
-    <table class="w-full">
-      <thead><tr class="text-gray-600 text-left border-b border-gray-800">
-        <th class="pb-2 pr-4 font-normal">ID</th>
-        <th class="pb-2 pr-4 font-normal">Channel</th>
-        <th class="pb-2 pr-4 font-normal">Role</th>
-        <th class="pb-2 font-normal">Strategy</th>
-      </tr></thead>
-      <tbody>
-        ${d.map(a => `<tr class="border-b border-gray-800/50">
-          <td class="py-1.5 pr-4 text-gray-300">${a.id}</td>
-          <td class="py-1.5 pr-4 text-gray-500">${a.channelType}</td>
-          <td class="py-1.5 pr-4">${roleBadge(a.role)}</td>
-          <td class="py-1.5 text-gray-500">${a.strategy.replace('_', ' ')}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
+  const rows = d.map(a =>
+    '<tr class="border-b border-gray-800/50">' +
+      '<td class="py-1.5 pr-4 text-gray-300">' + a.id + '</td>' +
+      '<td class="py-1.5 pr-4 text-gray-500">' + a.channelType + '</td>' +
+      '<td class="py-1.5 pr-4">' + roleBadge(a.role) + '</td>' +
+      '<td class="py-1.5 text-gray-500">' + a.strategy.replace('_', ' ') + '</td>' +
+    '</tr>'
+  ).join('');
+  el.innerHTML =
+    '<table class="w-full">' +
+      '<thead><tr class="text-gray-600 text-left border-b border-gray-800">' +
+        '<th class="pb-2 pr-4 font-normal">ID</th>' +
+        '<th class="pb-2 pr-4 font-normal">Channel</th>' +
+        '<th class="pb-2 pr-4 font-normal">Role</th>' +
+        '<th class="pb-2 font-normal">Strategy</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
+async function loadJvm() {
+  const d = await api('jvm');
+  if (!d) return;
+
+  // ── Memory panel ─────────────────────────────────────────────────────
+  const heap = d.heap || {};
+  const pct  = heap.pct || 0;
+  let memHtml = kv('Heap used', (heap.usedMb || 0) + ' / ' + (heap.maxMb || '?') + ' MB (' + pct + '%)') +
+    progressBar(pct) +
+    kv('Non-heap', (d.nonHeap ? d.nonHeap.usedMb : 0) + ' MB');
+  if (d.gc && d.gc.length > 0) {
+    memHtml += '<div class="pt-2 mt-1 border-t border-gray-800 space-y-0.5">' +
+      d.gc.map(g =>
+        '<div class="flex justify-between text-gray-500">' +
+          '<span>' + g.name + '</span>' +
+          '<span>' + g.collectionCount + '&#215; &nbsp;' + g.collectionTimeMs + 'ms</span>' +
+        '</div>'
+      ).join('') + '</div>';
+  }
+  document.getElementById('jvm-memory-body').innerHTML = memHtml;
+
+  // ── Performance panel ─────────────────────────────────────────────────
+  const cpu = d.cpu || {};
+  const thr = d.threads || {};
+  const rt  = d.runtime || {};
+  let perfHtml = '';
+  if (cpu.processCpuPct !== undefined && cpu.processCpuPct >= 0) {
+    perfHtml +=
+      kv('Process CPU', cpu.processCpuPct + '%') + progressBar(cpu.processCpuPct) +
+      kv('System CPU',  cpu.systemCpuPct  + '%') + progressBar(cpu.systemCpuPct, 'bg-purple-500');
+  } else {
+    perfHtml += kv('Load avg', (cpu.loadAvg || 0).toFixed(2));
+  }
+  perfHtml += kv('Processors', cpu.processors || '—');
+  if (thr.live !== undefined) {
+    perfHtml += '<div class="pt-2 mt-1 border-t border-gray-800">' +
+      kv('Threads live',   thr.live) +
+      kv('Threads peak',   thr.peak) +
+      kv('Threads daemon', thr.daemon) +
+    '</div>';
+  }
+  if (rt.jvmName) {
+    perfHtml += '<div class="pt-2 mt-1 border-t border-gray-800">' +
+      kv('JVM', rt.jvmName + ' ' + rt.jvmVersion) +
+      kv('JVM uptime', ((rt.uptimeMs || 0) / 60000).toFixed(1) + ' min') +
+    '</div>';
+  }
+  document.getElementById('jvm-perf-body').innerHTML = perfHtml;
 }
 
 async function loadWorkflows() {
@@ -267,27 +399,28 @@ async function loadWorkflows() {
     el.innerHTML = '<span class="text-gray-600">No workflow runs found</span>';
     return;
   }
-  el.innerHTML = `
-    <table class="w-full">
-      <thead><tr class="text-gray-600 text-left border-b border-gray-800">
-        <th class="pb-2 pr-4 font-normal">Run</th>
-        <th class="pb-2 pr-4 font-normal">DAG</th>
-        <th class="pb-2 pr-4 font-normal">State</th>
-        <th class="pb-2 pr-4 font-normal">Duration</th>
-        <th class="pb-2 pr-4 font-normal">Trigger</th>
-        <th class="pb-2 font-normal">Started</th>
-      </tr></thead>
-      <tbody>
-        ${d.map(r => `<tr class="border-b border-gray-800/50">
-          <td class="py-1.5 pr-4 text-gray-500 font-mono text-xs">${r.runId.substring(0, 8)}…</td>
-          <td class="py-1.5 pr-4 text-gray-300">${r.dagId}</td>
-          <td class="py-1.5 pr-4">${stateBadge(r.state)}</td>
-          <td class="py-1.5 pr-4 text-gray-500">${r.durationMs != null ? (r.durationMs / 1000).toFixed(1) + 's' : '—'}</td>
-          <td class="py-1.5 pr-4 text-gray-600">${r.triggered}</td>
-          <td class="py-1.5 text-gray-600">${r.started ? new Date(r.started).toLocaleString() : '—'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
+  const rows = d.map(r =>
+    '<tr class="border-b border-gray-800/50">' +
+      '<td class="py-1.5 pr-4 text-gray-500 font-mono">' + r.runId.substring(0, 8) + '&#8230;</td>' +
+      '<td class="py-1.5 pr-4 text-gray-300">' + r.dagId + '</td>' +
+      '<td class="py-1.5 pr-4">' + workflowStateBadge(r.state) + '</td>' +
+      '<td class="py-1.5 pr-4 text-gray-500">' + (r.durationMs != null ? (r.durationMs / 1000).toFixed(1) + 's' : '&#8212;') + '</td>' +
+      '<td class="py-1.5 pr-4 text-gray-600">' + r.triggered + '</td>' +
+      '<td class="py-1.5 text-gray-600">' + (r.started ? new Date(r.started).toLocaleString() : '&#8212;') + '</td>' +
+    '</tr>'
+  ).join('');
+  el.innerHTML =
+    '<table class="w-full">' +
+      '<thead><tr class="text-gray-600 text-left border-b border-gray-800">' +
+        '<th class="pb-2 pr-4 font-normal">Run</th>' +
+        '<th class="pb-2 pr-4 font-normal">DAG</th>' +
+        '<th class="pb-2 pr-4 font-normal">State</th>' +
+        '<th class="pb-2 pr-4 font-normal">Duration</th>' +
+        '<th class="pb-2 pr-4 font-normal">Trigger</th>' +
+        '<th class="pb-2 font-normal">Started</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
 }
 
 async function loadRoutes() {
@@ -298,10 +431,9 @@ async function loadRoutes() {
     el.innerHTML = '<span class="text-gray-600">No routes registered</span>';
     return;
   }
-  // Show as a compact pill grid
-  el.innerHTML = `<div class="flex flex-wrap gap-2">
-    ${d.map(r => `<span class="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-gray-400">${r}</span>`).join('')}
-  </div>`;
+  el.innerHTML = '<div class="flex flex-wrap gap-2">' +
+    d.map(r => '<span class="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-gray-400">' + r + '</span>').join('') +
+  '</div>';
 }
 
 // ── refresh ───────────────────────────────────────────────────────────────
@@ -312,7 +444,7 @@ async function refreshAll() {
   try {
     await Promise.all([
       loadOverview(), loadHealth(), loadPlugins(),
-      loadAgents(),   loadWorkflows(), loadRoutes()
+      loadAgents(), loadJvm(), loadWorkflows(), loadRoutes()
     ]);
   } finally {
     btn.classList.remove('spinning');
@@ -320,13 +452,8 @@ async function refreshAll() {
 }
 
 // ── boot ──────────────────────────────────────────────────────────────────
-if (token) {
-  refreshAll();
-} else {
-  showAuthOverlay();
-}
-// Auto-refresh every 10 seconds
-setInterval(() => { if (token && !document.hidden) refreshAll(); }, 10_000);
+if (token) { refreshAll(); } else { showAuthOverlay(); }
+setInterval(() => { if (token && !document.hidden) refreshAll(); }, 10000);
 </script>
 </body>
 </html>
