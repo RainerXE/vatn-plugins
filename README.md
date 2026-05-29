@@ -61,6 +61,8 @@ Each plugin implements `VNodePlugin` and is registered with `VNodeRunner.addPlug
 | Plugin | Artifact | What it does |
 |--------|----------|--------------|
 | [vatn-plugin-wasm](vatn-plugin-wasm/) | `vatn-plugin-wasm` | **Sandboxed WASM execution.** Registers `VWasmRuntime` so any plugin can load and call `.wasm` modules. Engine: [Chicory](https://github.com/dylibso/chicory) (pure Java, zero JNI). Supports WASI p1 for Rust/C/Go/Zig binaries with capability-scoped filesystem. Clean swap point for GraalWASM. See below. |
+| [vatn-plugin-python](vatn-plugin-python/) | `vatn-plugin-python` | **Sandboxed Python runtime.** Pinokio-compatible `run[]` script format. Manages venvs (uv/pip/conda), supervises Python daemon processes with auto-restart, streams logs. Admin UI at `/python/ui`. See below. |
+| [vatn-plugin-node](vatn-plugin-node/) | `vatn-plugin-node` | **Sandboxed Node.js runtime.** Same `run[]` script format as Python plugin. npm/npx package management, supervised Node.js processes with auto-restart, log streaming. Admin UI at `/node/ui`. See below. |
 
 ---
 
@@ -281,6 +283,75 @@ See [vatn-plugin-wasm/README.md](vatn-plugin-wasm/README.md) for configuration, 
 
 ---
 
+## Plugin detail: vatn-plugin-python
+
+Pinokio-compatible Python runtime. Reads the same `run[]` JSON scripts used by [Pinokio](https://github.com/pinokiocomputer/pinokio) AI app launchers — drop any Pinokio-format app into `.vatn/python/apps/` and run it from VATN.
+
+```java
+VNodeRunner.create(8080)
+    .addPlugin(new PythonPlugin())
+    .start();
+```
+
+```java
+// In any plugin:
+PythonRuntime python = ctx.getService(PythonRuntime.class).orElseThrow();
+python.createEnv("myapp");                     // creates .vatn/python/envs/myapp/
+
+// Run a Pinokio script
+var script = PynokioScript.fromFile(appDir.resolve("pinokio.json"));
+new PynokioScriptRunner(python, procs, "myapp", appDir).run(script);
+```
+
+**Script format** — Pinokio `run[]` JSON, same shape for all runtime plugins:
+```json
+{ "run": [
+    { "method": "shell.run", "params": { "message": "pip install flask", "venv": "myenv" } },
+    { "method": "shell.run", "params": { "message": "python app.py", "venv": "myenv",
+                                          "daemon": true, "autoRestart": true } }
+] }
+```
+
+Package installer priority: `uv pip install` → `pip install` → `conda install`.
+
+Admin UI at `GET /python/ui`. See [vatn-plugin-python/README.md](vatn-plugin-python/README.md) for full API and Pinokio compatibility table.
+
+---
+
+## Plugin detail: vatn-plugin-node
+
+Node.js process manager using the same `run[]` script format as the Python plugin. Runs any Node.js app — Express servers, CLI tools, workers — as a supervised VATN process.
+
+```java
+VNodeRunner.create(8080)
+    .addPlugin(new NodePlugin())
+    .start();
+```
+
+```java
+// In any plugin:
+NodeRuntime node = ctx.getService(NodeRuntime.class).orElseThrow();
+
+// Run a vatn-node.json script
+var script = NodeScriptRunner.NodeScript.fromFile(appDir.resolve("vatn-node.json"));
+new NodeScriptRunner(node, procs, "myapp", appDir).run(script);
+```
+
+**Script format** — same `run[]` JSON, Node.js-flavoured methods:
+```json
+{ "run": [
+    { "method": "npm.install",  "params": { "packages": ["express"] } },
+    { "method": "shell.run",    "params": { "message": "node server.js",
+                                             "daemon": true, "autoRestart": true } }
+] }
+```
+
+Supports `npm.install`, `npx.run`, `shell.run` (daemon/autoRestart), `fs.write/read`, `local.set/get`. Auto-detects `node`, `npm`, `npx` binaries at startup.
+
+Admin UI at `GET /node/ui`. See [vatn-plugin-node/README.md](vatn-plugin-node/README.md).
+
+---
+
 ## Recommended stacks
 
 ### Web API
@@ -312,6 +383,15 @@ SecurityPlugin  →  PostgresPlugin  →  ActivityPubPlugin  →  CommPlugin  �
 ```java
 WasmPlugin  →  PostgresPlugin  →  MetricsPlugin  →  YourAgentPlugin
 // YourAgentPlugin loads .wasm verifiers, policy engines, or domain tools via VWasmRuntime
+```
+
+### AI model serving (Python + Node.js sidecar)
+
+```java
+PythonPlugin  →  NodePlugin  →  OpenAiPlugin  →  YourAiPlugin
+// PythonPlugin runs ML inference servers (FastAPI, Gradio, vllm)
+// NodePlugin runs the frontend / streaming relay
+// Both supervised, auto-restarted, and audited by VATN
 ```
 
 ---

@@ -33,6 +33,8 @@
         <module>vatn-plugin-admin</module>
         <module>vatn-plugin-terminalphone</module>
         <module>vatn-plugin-wasm</module>
+        <module>vatn-plugin-python</module>
+        <module>vatn-plugin-node</module>
     </modules>
 
     <properties>
