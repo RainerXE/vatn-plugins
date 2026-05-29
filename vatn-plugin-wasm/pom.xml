@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.vatn.plugins</groupId>
+        <artifactId>vatn-plugins-parent</artifactId>
+        <version>1.0-alpha.11</version>
+    </parent>
+
+    <artifactId>vatn-plugin-wasm</artifactId>
+    <packaging>jar</packaging>
+
+    <name>VATN Plugin — WASM</name>
+    <description>
+        Sandboxed WebAssembly execution for VATN nodes via Chicory (pure-Java, zero-JNI).
+        Registers VWasmRuntime so any plugin can load and execute .wasm modules with
+        WASI p1 file-system scoping, capability grants, and per-call audit logging.
+        Designed for a hot-swap to GraalWASM when running on GraalVM JDK.
+    </description>
+
+    <!--
+      CHICORY RUNTIME DEPENDENCY
+      ═══════════════════════════
+      Chicory version is managed by the single <chicory.version> property in
+      vatn-plugins-parent/pom.xml.  To upgrade: change that one property and rebuild.
+
+      chicory.version is currently: 1.7.5  (March 2026, latest stable)
+      Release notes:  https://github.com/dylibso/chicory/releases
+      Maven Central:  https://central.sonatype.com/artifact/com.dylibso.chicory/runtime
+
+      Switching to GraalWASM:
+        Replace ChicoryWasmRuntime with a GraalWasmRuntime implementation that
+        implements the same VWasmRuntime SPI. Register it in WasmPlugin#onInitialize
+        (gated on presence of com.oracle.truffle.api.TruffleRuntime on classpath).
+        No changes needed in callers.
+    -->
+
+    <dependencies>
+        <!-- VATN API — provided at runtime by the node -->
+        <dependency>
+            <groupId>dev.vatn</groupId>
+            <artifactId>vatn-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Chicory: pure-Java WASM runtime (zero JNI, zero native deps) -->
+        <dependency>
+            <groupId>com.dylibso.chicory</groupId>
+            <artifactId>runtime</artifactId>
+            <version>${chicory.version}</version>
+        </dependency>
+
+        <!-- Chicory WASI Preview 1 — filesystem, args, env, stdin/stdout for WASM processes -->
+        <dependency>
+            <groupId>com.dylibso.chicory</groupId>
+            <artifactId>wasi</artifactId>
+            <version>${chicory.version}</version>
+        </dependency>
+
+        <!-- Jackson for HTTP endpoint JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+    </dependencies>
+</project>

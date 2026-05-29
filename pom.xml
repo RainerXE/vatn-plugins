@@ -6,7 +6,7 @@
 
     <groupId>dev.vatn.plugins</groupId>
     <artifactId>vatn-plugins-parent</artifactId>
-    <version>1.0-alpha.10</version>
+    <version>1.0-alpha.11</version>
     <packaging>pom</packaging>
 
     <name>VATN Plugins Parent</name>
@@ -32,12 +32,15 @@
         <module>vatn-plugin-comm</module>
         <module>vatn-plugin-admin</module>
         <module>vatn-plugin-terminalphone</module>
+        <module>vatn-plugin-wasm</module>
     </modules>
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vatn.version>1.0-alpha.10</vatn.version>
+        <vatn.version>1.0-alpha.11</vatn.version>
+        <!-- Chicory WASM runtime — single property to update when a new version ships -->
+        <chicory.version>1.7.5</chicory.version>
         <jjwt.version>0.12.6</jjwt.version>
         <jackson.version>2.16.1</jackson.version>
         <slf4j.version>2.0.12</slf4j.version>

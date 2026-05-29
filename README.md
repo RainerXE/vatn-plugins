@@ -56,6 +56,12 @@ Each plugin implements `VNodePlugin` and is registered with `VNodeRunner.addPlug
 |--------|----------|--------------|
 | [vatn-plugin-activitypub](vatn-plugin-activitypub/) | `vatn-plugin-activitypub` | ActivityPub federation. Exposes `/.well-known/webfinger`, `/ap/actor`, `/ap/inbox`, `/ap/outbox`. Handles Follow/Undo activities and sends HTTP-signed Accept responses. RSA-2048 key management built in. |
 
+### Runtime Extensions
+
+| Plugin | Artifact | What it does |
+|--------|----------|--------------|
+| [vatn-plugin-wasm](vatn-plugin-wasm/) | `vatn-plugin-wasm` | **Sandboxed WASM execution.** Registers `VWasmRuntime` so any plugin can load and call `.wasm` modules. Engine: [Chicory](https://github.com/dylibso/chicory) (pure Java, zero JNI). Supports WASI p1 for Rust/C/Go/Zig binaries with capability-scoped filesystem. Clean swap point for GraalWASM. See below. |
+
 ---
 
 ## Quick start
@@ -199,6 +205,42 @@ See [vatn-plugin-terminalphone/README.md](vatn-plugin-terminalphone/README.md) f
 
 ---
 
+## Plugin detail: vatn-plugin-wasm
+
+Sandboxed WebAssembly execution using [Chicory](https://github.com/dylibso/chicory) — a pure-Java, zero-JNI WASM runtime. Registers `VWasmRuntime` in the node context so any plugin can load and invoke `.wasm` modules without importing the plugin as a compile-time dependency.
+
+```java
+VNodeRunner.create(8080)
+    .addPlugin(new WasmPlugin())          // default: auto-loads .vatn/wasm/*.wasm
+    .addPlugin(new MyPlugin())
+    .start();
+```
+
+In your plugin:
+
+```java
+VWasmRuntime wasm = ctx.getService(VWasmRuntime.class).orElseThrow();
+
+// Load from bytes (or use auto-loaded module by name)
+VWasmModule mod = wasm.load("verifier", Files.readAllBytes(wasmPath));
+
+// Call an exported integer function
+long[] result = mod.call("add", 40L, 2L);   // → [42]
+
+// Run a WASI binary (Rust/C/Go/Zig) with scoped filesystem + stdout capture
+String output = mod.callWasi(new String[]{"check", "src/main.odin"}, null);
+```
+
+**Sandbox model**: WASM linear-memory isolation (Chicory) + WASI capability grants (filesystem scoped to workspace, no network) + `VSubprocessAuditService` (every call logged).
+
+**Upgrading Chicory**: one property in `vatn-plugins-parent/pom.xml` — `<chicory.version>`. Change it and rebuild.
+
+**Switching to GraalWASM**: replace `new ChicoryWasmRuntime(...)` in `WasmPlugin` with a `GraalWasmRuntime` that implements the same `VWasmRuntime` SPI. All callers continue working unchanged. GraalWASM compiles WASM to native machine code on GraalVM JDK — peak performance when you need it.
+
+See [vatn-plugin-wasm/README.md](vatn-plugin-wasm/README.md) for configuration, REST API, language examples (Rust/C/Go/Zig), and the GraalWASM migration path.
+
+---
+
 ## Recommended stacks
 
 ### Web API
@@ -223,6 +265,13 @@ ScraperPlugin  →  IndexerPlugin  →  S3Plugin  →  MetricsPlugin
 
 ```java
 SecurityPlugin  →  PostgresPlugin  →  ActivityPubPlugin  →  CommPlugin  →  YourPlugin
+```
+
+### Agentic tool runtime (native code in the JVM)
+
+```java
+WasmPlugin  →  PostgresPlugin  →  MetricsPlugin  →  YourAgentPlugin
+// YourAgentPlugin loads .wasm verifiers, policy engines, or domain tools via VWasmRuntime
 ```
 
 ---
