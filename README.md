@@ -64,7 +64,47 @@ Each plugin implements `VNodePlugin` and is registered with `VNodeRunner.addPlug
 
 ---
 
-## Quick start
+## Quick Start — first plugin in 5 minutes
+
+With VATN installed (`vatn init my-project` or `mvn install -DskipTests` from source):
+
+```bash
+vatn init my-project      # scaffold Maven project + HelloPlugin skeleton
+cd my-project
+```
+
+Edit `src/main/java/.../HelloPlugin.java`:
+
+```java
+public class HelloPlugin implements VNodePlugin {
+    public String getId()      { return "com.example.hello"; }
+    public String getName()    { return "Hello VATN"; }
+    public String getVersion() { return "1.0.0"; }
+
+    @Override
+    public void onInitialize(VNodeContext ctx) {
+        ctx.register("/hello", routes -> routes
+            .get("/",       (req, res) -> res.send("Hello from VATN!"))
+            .get("/{name}", (req, res) ->
+                res.sendJson("{\"msg\":\"Hello, " + req.getPathParam("name") + "!\"}")));
+    }
+
+    @Override public void onShutdown() {}
+}
+```
+
+```bash
+vatn run                  # compiles and starts on :8080
+
+curl http://localhost:8080/hello/world
+# {"msg":"Hello, world!"}
+```
+
+Full step-by-step walkthrough with Node.js analogies, DAG workflows, security, and deployment: **[docs/dev-guide.md](https://github.com/RainerXE/vatn/blob/main/docs/dev-guide.md)**
+
+---
+
+## Dependency setup
 
 ### 1. Install VATN to your local Maven repo
 
