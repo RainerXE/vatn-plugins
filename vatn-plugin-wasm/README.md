@@ -2,12 +2,23 @@
 
 Sandboxed WebAssembly execution for VATN nodes — run native code compiled from Rust, C, Go, Zig, or any WASI-compatible language inside the JVM with capability-based security and per-call audit logging.
 
-**Engine**: [Chicory](https://github.com/dylibso/chicory) — pure Java, zero JNI, zero native dependencies  
 **Runtime**: VATN 1.0-alpha.11+
 
-> **Upgrading Chicory**: change `<chicory.version>` in `vatn-plugins-parent/pom.xml`. One property, rebuild. See [Upgrading Chicory](#upgrading-chicory).
+## Backend options
+
+All three backends implement the same `VWasmRuntime` SPI. Switch with a Maven profile — no code changes in callers.
+
+| Backend | Activate | Who it is | Performance | Requires |
+|---------|----------|-----------|-------------|---------|
+| **Chicory** _(default)_ | `-P chicory` or nothing | [Dylibso](https://github.com/dylibso/chicory) — proven, Maven Central | 8–25 M calls/s (interpreter) | Any Java 25+ JDK |
+| **Endive** | `-P endive` | [Bytecode Alliance fork of Chicory](https://github.com/bytecodealliance/endive) — same API, Cranelift compiler on roadmap | Same as Chicory today; 150–500 M/s when Redline ships | Any Java 25+ JDK |
+| **GraalWASM** | `-P graalwasm` | [Oracle GraalVM](https://www.graalvm.org/webassembly/) — JIT compiles WASM to native | 200–500 M calls/s after warmup | GraalVM JDK 25+ |
+
+> **Upgrading Chicory**: change `<chicory.version>` in `vatn-plugins-parent/pom.xml`. One property, rebuild.
 >
-> **Switching to GraalWASM**: replace `new ChicoryWasmRuntime(...)` in `WasmPlugin.onInitialize` with a `GraalWasmRuntime` that implements the same `VWasmRuntime` SPI. All callers continue working unchanged.
+> **Switching to Endive**: `mvn package -P endive`. Endive preserves Chicory's package names — same code compiles against both JARs.
+>
+> **Switching to GraalWASM**: add a `GraalWasmRuntime` class implementing `VWasmRuntime`, register it in `WasmPlugin.onInitialize`. All callers unchanged.
 
 ---
 
@@ -277,6 +288,92 @@ int main(int argc, char *argv[]) {
 
 ```bash
 /opt/wasi-sdk/bin/clang --sysroot=/opt/wasi-sdk/share/wasi-sysroot hello.c -o .vatn/wasm/hello.wasm
+```
+
+---
+
+---
+
+## Endive — the Bytecode Alliance fork
+
+[Endive](https://github.com/bytecodealliance/endive) (`run.endive:runtime`) is a fork of Chicory adopted by the Bytecode Alliance as a vendor-neutral project. It preserves the `com.dylibso.chicory.*` package names, so the plugin compiles and runs against both JARs without any code changes.
+
+```bash
+# Build with Endive instead of Chicory:
+mvn package -P endive -pl vatn-plugin-wasm
+
+# Or set the system property:
+mvn package -Dwasm.runtime=endive -pl vatn-plugin-wasm
+```
+
+**Why Endive matters — the Redline compiler:**  
+Endive's roadmap includes the Redline compiler — Cranelift (the same backend as Wasmtime) compiled to WASM, then executed via Java 25's Panama FFM API to compile further to native machine code. On Java 25+, this delivers GraalWASM-level performance with **zero additional dependencies** — no GraalVM JDK required. When Redline ships, switching from Chicory to Endive will be a one-line pom change.
+
+**Maven coordinates (`run.endive`):**
+```xml
+<!-- Set endive.version in vatn-plugin-wasm/pom.xml -->
+<properties>
+    <endive.version>1.0.0</endive.version>
+</properties>
+
+<!-- Already wired in the -P endive profile: -->
+<dependency>
+    <groupId>run.endive</groupId>
+    <artifactId>runtime</artifactId>
+    <version>${endive.version}</version>
+</dependency>
+<dependency>
+    <groupId>run.endive</groupId>
+    <artifactId>wasi</artifactId>
+    <version>${endive.version}</version>
+</dependency>
+```
+
+If Endive is not yet on Maven Central, use JitPack (add repository `https://jitpack.io`, change groupId to `com.github.bytecodealliance`, artifactId to `endive`).
+
+---
+
+## Benchmark — choosing the right backend
+
+The plugin ships a JMH benchmark in its test scope that measures load time, call throughput, and SPI overhead. Run it to get numbers for your specific hardware.
+
+### Running the benchmark
+
+```bash
+# Quick benchmark (Chicory, default):
+cd vatn-plugins
+mvn test -pl vatn-plugin-wasm -Dtest=WasmRuntimeBenchmark -P chicory
+
+# Same benchmark with Endive (when available):
+mvn test -pl vatn-plugin-wasm -Dtest=WasmRuntimeBenchmark -P endive
+
+# Full JMH run with reports:
+mvn package -pl vatn-plugin-wasm -P chicory -DskipTests
+java -jar vatn-plugin-wasm/target/benchmarks.jar -f 2 -wi 5 -i 5 -rff results.csv
+```
+
+### Expected results (Apple M-series, Java 25, small 41-byte add module)
+
+| Benchmark | Chicory (interpreter) | Endive + Redline (future) | GraalWASM (GraalVM JDK) |
+|-----------|----------------------|--------------------------|-------------------------|
+| `loadModule` | 2–8 ms | ~same | ~same |
+| `callAdd_twoI64` | 8–25 M calls/s | 150–500 M calls/s | 200–500 M calls/s |
+| `callAdd_largeValues` | ~same | ~same | ~same |
+| `callViaRuntime` (SPI overhead) | < 2% vs raw | < 2% | < 2% |
+
+**Load time is amortized.** Load once at startup, call millions of times.
+
+### Decision guide
+
+```
+You need...                          → Use
+─────────────────────────────────────────────────────────────────
+Reliable, production-ready today     → Chicory (default)
+Future native perf, no GraalVM dep   → Endive (when Redline ships)
+Peak perf, already on GraalVM JDK   → GraalWASM (-P graalwasm)
+Run a verifier/linter once per PR    → Any — load cost dominates
+High-throughput inference in WASM   → GraalWASM or Endive+Redline
+Must run on OpenJDK (not GraalVM)   → Chicory or Endive+Redline
 ```
 
 ---
