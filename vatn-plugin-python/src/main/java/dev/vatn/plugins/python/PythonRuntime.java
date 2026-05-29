@@ -170,6 +170,46 @@ public class PythonRuntime implements VService {
         return env;
     }
 
+    // ── Disk usage ────────────────────────────────────────────────────────────
+
+    public record DiskUsage(long envsBytesUsed, long appsBytesUsed,
+                            long freeBytes, long totalBytes) {
+        public String envsHuman()  { return human(envsBytesUsed); }
+        public String appsHuman()  { return human(appsBytesUsed); }
+        public String freeHuman()  { return human(freeBytes); }
+        public String totalHuman() { return human(totalBytes); }
+        private static String human(long bytes) {
+            if (bytes < 1024) return bytes + " B";
+            double kb = bytes / 1024.0;
+            if (kb < 1024) return String.format("%.1f KB", kb);
+            double mb = kb / 1024.0;
+            if (mb < 1024) return String.format("%.1f MB", mb);
+            return String.format("%.2f GB", mb / 1024.0);
+        }
+    }
+
+    public DiskUsage getDiskUsage() {
+        long envsUsed  = dirSize(envsDir);
+        long appsUsed  = dirSize(appsDir);
+        long free = 0, total = 0;
+        try {
+            java.nio.file.FileStore store = java.nio.file.Files.getFileStore(
+                envsDir.toAbsolutePath());
+            free  = store.getUsableSpace();
+            total = store.getTotalSpace();
+        } catch (Exception ignored) {}
+        return new DiskUsage(envsUsed, appsUsed, free, total);
+    }
+
+    private static long dirSize(Path path) {
+        if (!Files.exists(path)) return 0;
+        try (var s = Files.walk(path)) {
+            return s.filter(Files::isRegularFile)
+                    .mapToLong(p -> { try { return Files.size(p); } catch (Exception e) { return 0; } })
+                    .sum();
+        } catch (IOException e) { return 0; }
+    }
+
     // ── Accessors ─────────────────────────────────────────────────────────────
 
     public String  pythonVersion()  { return pythonVersion; }

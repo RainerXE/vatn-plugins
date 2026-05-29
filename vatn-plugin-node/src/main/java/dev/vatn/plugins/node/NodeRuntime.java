@@ -121,6 +121,42 @@ public class NodeRuntime implements VService {
         return env;
     }
 
+    // ── Disk usage ────────────────────────────────────────────────────────────
+
+    public record DiskUsage(long appsBytesUsed, long freeBytes, long totalBytes) {
+        public String appsHuman()  { return human(appsBytesUsed); }
+        public String freeHuman()  { return human(freeBytes); }
+        public String totalHuman() { return human(totalBytes); }
+        private static String human(long bytes) {
+            if (bytes < 1024) return bytes + " B";
+            double kb = bytes / 1024.0;
+            if (kb < 1024) return String.format("%.1f KB", kb);
+            double mb = kb / 1024.0;
+            if (mb < 1024) return String.format("%.1f MB", mb);
+            return String.format("%.2f GB", mb / 1024.0);
+        }
+    }
+
+    public DiskUsage getDiskUsage() {
+        long appsUsed = dirSize(appsDir);
+        long free = 0, total = 0;
+        try {
+            java.nio.file.FileStore store = java.nio.file.Files.getFileStore(appsDir.toAbsolutePath());
+            free  = store.getUsableSpace();
+            total = store.getTotalSpace();
+        } catch (Exception ignored) {}
+        return new DiskUsage(appsUsed, free, total);
+    }
+
+    private static long dirSize(Path path) {
+        if (!java.nio.file.Files.exists(path)) return 0;
+        try (var s = java.nio.file.Files.walk(path)) {
+            return s.filter(java.nio.file.Files::isRegularFile)
+                    .mapToLong(p -> { try { return java.nio.file.Files.size(p); } catch (Exception e) { return 0; } })
+                    .sum();
+        } catch (IOException e) { return 0; }
+    }
+
     // ── Accessors ─────────────────────────────────────────────────────────────
 
     public String  nodeVersion() { return nodeVersion; }

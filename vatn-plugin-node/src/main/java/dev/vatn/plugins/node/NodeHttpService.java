@@ -33,18 +33,23 @@ class NodeHttpService implements VHttpService {
 
     private final NodeRuntime        runtime;
     private final NodeProcessManager manager;
+    private final RuntimeTomlConfig  tomlConfig;
     private final ObjectMapper       mapper  = new ObjectMapper();
     private final String             adminUi;
 
-    NodeHttpService(NodeRuntime runtime, NodeProcessManager manager) {
-        this.runtime = runtime;
-        this.manager = manager;
-        this.adminUi = loadAdminUi();
+    NodeHttpService(NodeRuntime runtime, NodeProcessManager manager,
+                    RuntimeTomlConfig tomlConfig) {
+        this.runtime    = runtime;
+        this.manager    = manager;
+        this.tomlConfig = tomlConfig;
+        this.adminUi    = loadAdminUi();
     }
 
     @Override
     public void routing(VHttpRoutes routes) {
         routes.get("/status",                    this::handleStatus);
+        routes.get("/config",                    this::handleGetConfig);
+        routes.put("/config",                    this::handleSaveConfig);
         routes.get("/apps",                      this::handleListApps);
         routes.post("/apps/{name}/install",      this::handleInstall);
         routes.post("/apps/{name}/run",          this::handleRunApp);
@@ -54,6 +59,41 @@ class NodeHttpService implements VHttpService {
         routes.post("/processes/{id}/stop",      this::handleStopProcess);
         routes.post("/processes/{id}/restart",   this::handleRestartProcess);
         routes.get("/ui",                        this::handleUi);
+    }
+
+    private void handleGetConfig(VHttpRequest req, VHttpResponse res) {
+        NodeRuntime.DiskUsage disk = runtime.getDiskUsage();
+        res.sendJson(toJson(Map.of(
+            "appsDir",  runtime.appsDir().toString(),
+            "disk", Map.of(
+                "appsBytesUsed", disk.appsBytesUsed(),
+                "appsHuman",     disk.appsHuman(),
+                "freeBytes",     disk.freeBytes(),
+                "freeHuman",     disk.freeHuman(),
+                "totalBytes",    disk.totalBytes(),
+                "totalHuman",    disk.totalHuman()
+            ),
+            "note", "Path changes are saved to .vatn/vatn.toml and take effect after restart"
+        )));
+    }
+
+    @SuppressWarnings({"unchecked","rawtypes"})
+    private void handleSaveConfig(VHttpRequest req, VHttpResponse res) {
+        try {
+            Map body = mapper.readValue(req.getBody(), Map.class);
+            java.util.LinkedHashMap<String, String> values = new java.util.LinkedHashMap<>();
+            if (body.containsKey("appsDir"))    values.put("apps_dir",    (String) body.get("appsDir"));
+            if (body.containsKey("nodeBinary")) values.put("node_binary", (String) body.get("nodeBinary"));
+            if (body.containsKey("npmBinary"))  values.put("npm_binary",  (String) body.get("npmBinary"));
+            tomlConfig.write(values);
+            res.sendJson(toJson(Map.of(
+                "status", "saved",
+                "restartRequired", true,
+                "message", "Configuration saved to .vatn/vatn.toml — restart VATN to apply"
+            )));
+        } catch (Exception e) {
+            res.status(500).sendJson("{\"error\":\"" + e.getMessage() + "\"}");
+        }
     }
 
     private void handleStatus(VHttpRequest req, VHttpResponse res) {

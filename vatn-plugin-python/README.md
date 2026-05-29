@@ -418,7 +418,29 @@ http://localhost:8080/python/ui
 
 ---
 
-## Configuration reference
+## `vatn.toml` configuration (recommended for production)
+
+The cleanest way to set storage paths — especially when environments live on a separate volume — is a `[python]` section in `.vatn/vatn.toml`. Changes are picked up on the next VATN start.
+
+```toml
+# .vatn/vatn.toml
+
+[python]
+envs_dir      = "/data/vatn/python/envs"   # where venvs are stored (can be large!)
+apps_dir      = "/data/vatn/python/apps"   # where pinokio.json app dirs live
+python_binary = "python3.12"               # override auto-detection
+prefer_uv     = true                       # use uv pip install (10-100× faster)
+```
+
+You can also edit and save these paths from the **admin UI** → ⚙ Storage & Configuration panel at `GET /python/ui`. Changes are written to `.vatn/vatn.toml` and take effect after VATN restarts.
+
+> **Disk space note:** Python ML environments can be large — PyTorch alone is 5–10 GB, vllm adds another 10–20 GB. Point `envs_dir` to a volume with enough headroom *before* installing heavy packages.
+
+**Resolution order**: programmatic constructor > `.vatn/vatn.toml [python]` > built-in default.
+
+---
+
+## Configuration reference (programmatic)
 
 ```java
 new PythonPlugin(PythonConfig.builder()

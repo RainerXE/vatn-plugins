@@ -33,18 +33,23 @@ class PythonHttpService implements VHttpService {
 
     private final PythonRuntime        runtime;
     private final PythonProcessManager manager;
+    private final RuntimeTomlConfig    tomlConfig;
     private final ObjectMapper         mapper  = new ObjectMapper();
     private final String               adminUi;
 
-    PythonHttpService(PythonRuntime runtime, PythonProcessManager manager) {
-        this.runtime = runtime;
-        this.manager = manager;
-        this.adminUi = loadAdminUi();
+    PythonHttpService(PythonRuntime runtime, PythonProcessManager manager,
+                      RuntimeTomlConfig tomlConfig) {
+        this.runtime    = runtime;
+        this.manager    = manager;
+        this.tomlConfig = tomlConfig;
+        this.adminUi    = loadAdminUi();
     }
 
     @Override
     public void routing(VHttpRoutes routes) {
         routes.get("/status",                       this::handleStatus);
+        routes.get("/config",                       this::handleGetConfig);
+        routes.put("/config",                       this::handleSaveConfig);
         routes.get("/envs",                         this::handleListEnvs);
         routes.post("/envs/{name}",                 this::handleCreateEnv);
         routes.delete("/envs/{name}",               this::handleDeleteEnv);
@@ -55,6 +60,46 @@ class PythonHttpService implements VHttpService {
         routes.get("/processes/{id}/status",        this::handleProcessStatus);
         routes.post("/processes/{id}/stop",         this::handleStopProcess);
         routes.get("/ui",                           this::handleUi);
+    }
+
+    private void handleGetConfig(VHttpRequest req, VHttpResponse res) {
+        PythonRuntime.DiskUsage disk = runtime.getDiskUsage();
+        res.sendJson(toJson(Map.of(
+            "envsDir",        runtime.envsDir().toString(),
+            "appsDir",        runtime.appsDir().toString(),
+            "disk", Map.of(
+                "envsBytesUsed",  disk.envsBytesUsed(),
+                "envsHuman",      disk.envsHuman(),
+                "appsBytesUsed",  disk.appsBytesUsed(),
+                "appsHuman",      disk.appsHuman(),
+                "freeBytes",      disk.freeBytes(),
+                "freeHuman",      disk.freeHuman(),
+                "totalBytes",     disk.totalBytes(),
+                "totalHuman",     disk.totalHuman()
+            ),
+            "tomlPath", tomlConfig.toString(),
+            "note", "Path changes are saved to .vatn/vatn.toml and take effect after restart"
+        )));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleSaveConfig(VHttpRequest req, VHttpResponse res) {
+        try {
+            Map<String, Object> body = mapper.readValue(req.getBody(), Map.class);
+            java.util.LinkedHashMap<String, String> values = new java.util.LinkedHashMap<>();
+            if (body.containsKey("envsDir")) values.put("envs_dir", (String) body.get("envsDir"));
+            if (body.containsKey("appsDir")) values.put("apps_dir", (String) body.get("appsDir"));
+            if (body.containsKey("pythonBinary")) values.put("python_binary", (String) body.get("pythonBinary"));
+            if (body.containsKey("preferUv")) values.put("prefer_uv", String.valueOf(body.get("preferUv")));
+            tomlConfig.write(values);
+            res.sendJson(toJson(Map.of(
+                "status", "saved",
+                "restartRequired", true,
+                "message", "Configuration saved to .vatn/vatn.toml — restart VATN to apply"
+            )));
+        } catch (Exception e) {
+            res.status(500).sendJson("{\"error\":\"" + e.getMessage() + "\"}");
+        }
     }
 
     private void handleStatus(VHttpRequest req, VHttpResponse res) {
