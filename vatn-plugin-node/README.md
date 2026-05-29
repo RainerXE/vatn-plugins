@@ -381,7 +381,27 @@ http://localhost:8080/node/ui
 
 ---
 
-## Configuration reference
+## `vatn.toml` configuration (recommended for production)
+
+```toml
+# .vatn/vatn.toml
+
+[node]
+apps_dir    = "/data/vatn/node/apps"   # where vatn-node.json app dirs live
+node_binary = "node"                   # override auto-detection
+npm_binary  = "npm"
+npx_binary  = "npx"
+```
+
+Edit and save from the **admin UI** → ⚙ Storage & Configuration panel at `GET /node/ui`. Changes are written to `.vatn/vatn.toml` and take effect after VATN restarts.
+
+> **Disk space:** `node_modules` is typically 100–500 MB per app. If you have many large apps, point `apps_dir` to a dedicated volume.
+
+**Resolution order**: programmatic constructor > `.vatn/vatn.toml [node]` > built-in default.
+
+---
+
+## Configuration reference (programmatic)
 
 ```java
 new NodePlugin(NodeConfig.builder()
