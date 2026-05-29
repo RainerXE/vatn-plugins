@@ -491,6 +491,71 @@ Path containment: `fs.write` and `fs.read` reject any `path` that resolves outsi
 
 ---
 
+## MLX — Apple Silicon local inference and fine-tuning
+
+On macOS with an M-series chip, `vatn-plugin-python` detects Apple Silicon at startup and reports MLX availability in the health check and admin UI (`🍎 MLX 0.21.x` badge).
+
+**What MLX enables:**
+- **Inference**: run any MLX-format model locally at 400+ tok/s — no LM Studio, no Ollama required
+- **LoRA fine-tuning**: train domain adapters on local data in ~1 hour on a 16 GB MacBook
+- **Full model fusion**: merge trained adapter into the base model for standalone deployment
+- **OpenAI-compatible API**: `mlx_lm.server` is a drop-in replacement for Ollama's `/v1` endpoint
+
+### Bundled MLX scripts
+
+Three ready-to-use scripts ship with the plugin (copy to `.vatn/python/apps/<name>/`):
+
+| Script | Purpose |
+|--------|---------|
+| `mlx-inference-server.json` | Install mlx-lm and start an OpenAI-compatible server at `http://localhost:8080/v1` |
+| `mlx-finetune-lora.json` | LoRA fine-tuning on local JSONL data; saves adapter weights |
+| `mlx-fuse-adapter.json` | Fuse trained adapter into base model; start fused model server |
+
+### Quick start: local inference on Apple Silicon
+
+```bash
+# 1. Copy the bundled script
+cp $(find ~/.m2 -name "mlx-inference-server.json" 2>/dev/null | head -1) \
+   .vatn/python/apps/mlx/pinokio.json
+
+# 2. Run it
+curl -X POST http://localhost:8080/python/apps/mlx/run
+# Installs mlx-lm, downloads model (~4 GB), starts server at :8080
+
+# 3. Use it exactly like Ollama / OpenAI
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"mlx-community/Mistral-7B-Instruct-v0.3-4bit",
+       "messages":[{"role":"user","content":"Hello"}]}'
+```
+
+### Recommended models (mlx-community on Hugging Face)
+
+| Model | Size | VRAM | Speed (M3 Max) | Best for |
+|-------|------|------|----------------|---------|
+| `Llama-3.2-3B-Instruct-4bit` | 1.8 GB | 8 GB | ~600 tok/s | Fast responses, chat |
+| `Mistral-7B-Instruct-v0.3-4bit` | 4.1 GB | 8 GB | ~400 tok/s | General coding/reasoning |
+| `Qwen2.5-14B-Instruct-4bit` | 8.2 GB | 16 GB | ~200 tok/s | Complex tasks |
+| `Qwen2.5-Coder-14B-Instruct-4bit` | 8.2 GB | 16 GB | ~200 tok/s | Code generation |
+| `gemma-3-27b-it-4bit` | 15 GB | 32 GB | ~80 tok/s | Highest quality local |
+
+### LoRA fine-tuning on local data
+
+```bash
+# Data format: JSONL, one JSON object per line
+# data/train.jsonl:
+{"messages":[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}
+
+# Start fine-tuning
+curl -X POST http://localhost:8080/python/apps/mlx-finetune/run
+# Trains for 1000 iterations (~1 hour on M3 Max for 7B model)
+# Output: ./adapters/v1/*.npz
+```
+
+For full fine-tuning integration with the Frejay/Trail learning pipeline, see the [Frejay v0.5 roadmap](https://github.com/RainerXE/vatn-plugins) — the Trail trace schema generates JSONL that feeds directly into `mlx_lm.lora`.
+
+---
+
 ## Package installer priority
 
 | Installer | Condition | Speed |

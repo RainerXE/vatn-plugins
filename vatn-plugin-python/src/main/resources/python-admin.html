@@ -191,6 +191,12 @@ async function loadStatus() {
   parts.push(`<span class="${d.healthy?'check-ok':'check-warn'}">${d.healthy?'✅':'⚠️'} ${d.version}</span>`);
   parts.push(d.uv !== 'not found' ? `<span class="check-ok">✅ uv ${d.uv}</span>` : '<span class="check-warn">⚠️ uv not found (using pip)</span>');
   parts.push(d.conda !== 'not found' ? `<span class="check-ok">✅ conda</span>` : '<span style="color:var(--muted)">○ conda not available</span>');
+  if (d.appleSilicon) {
+    const mlxOk = d.mlx && d.mlx !== 'not installed' && d.mlx !== 'n/a';
+    parts.push(mlxOk
+      ? `<span class="check-ok" title="MLX inference + LoRA fine-tuning available">🍎 MLX ${d.mlx}</span>`
+      : `<span class="check-warn" title="Apple Silicon detected — run: uv pip install mlx-lm">🍎 MLX not installed</span>`);
+  }
   document.getElementById('status-bar').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 }
 

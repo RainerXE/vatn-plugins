@@ -52,6 +52,7 @@ public class PythonRuntime implements VService {
         detectPython();
         detectUv();
         detectConda();
+        detectAppleSilicon();
         loadExistingEnvs();
     }
 
@@ -222,6 +223,37 @@ public class PythonRuntime implements VService {
     public Set<String> envNames()   { return Collections.unmodifiableSet(envs.keySet()); }
 
     public boolean isHealthy() { return !pythonVersion.equals("unknown"); }
+
+    // Apple Silicon / MLX detection
+    private boolean appleSilicon = false;
+    private boolean mlxAvailable = false;
+    private String  mlxVersion   = null;
+
+    public boolean isAppleSilicon() { return appleSilicon; }
+    public boolean isMlxAvailable() { return mlxAvailable; }
+    public String  mlxVersion()     { return mlxVersion; }
+
+    private void detectAppleSilicon() {
+        String os   = System.getProperty("os.name", "").toLowerCase();
+        String arch = System.getProperty("os.arch", "").toLowerCase();
+        appleSilicon = os.contains("mac") && (arch.contains("aarch64") || arch.contains("arm"));
+        if (appleSilicon) {
+            log.info("[PYTHON] Apple Silicon detected — MLX inference and fine-tuning available");
+            detectMlx();
+        }
+    }
+
+    private void detectMlx() {
+        String v = runQuiet(pythonBinary, "-c",
+            "import mlx; import mlx_lm; print(mlx_lm.__version__)");
+        if (v != null && !v.isBlank()) {
+            mlxAvailable = true;
+            mlxVersion   = v.trim();
+            log.info("[PYTHON] mlx-lm {} found", mlxVersion);
+        } else {
+            log.info("[PYTHON] mlx-lm not installed — run 'uv pip install mlx-lm' in a venv to enable");
+        }
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

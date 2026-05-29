@@ -109,6 +109,10 @@ class PythonHttpService implements VHttpService {
             "healthy",       runtime.isHealthy(),
             "uv",            runtime.uvAvailable() ? runtime.uvVersion() : "not found",
             "conda",         runtime.condaAvailable() ? "available" : "not found",
+            "appleSilicon",  runtime.isAppleSilicon(),
+            "mlx",           runtime.isMlxAvailable()
+                                ? runtime.mlxVersion()
+                                : (runtime.isAppleSilicon() ? "not installed" : "n/a"),
             "envCount",      runtime.envNames().size(),
             "processCount",  manager.getAll().size()
         )));
