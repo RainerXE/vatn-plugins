@@ -285,70 +285,84 @@ See [vatn-plugin-wasm/README.md](vatn-plugin-wasm/README.md) for configuration, 
 
 ## Plugin detail: vatn-plugin-python
 
-Pinokio-compatible Python runtime. Reads the same `run[]` JSON scripts used by [Pinokio](https://github.com/pinokiocomputer/pinokio) AI app launchers — drop any Pinokio-format app into `.vatn/python/apps/` and run it from VATN.
+**Pinokio-compatible Python runtime** — venv/conda management, supervised daemons, and a live admin UI.
 
 ```java
-VNodeRunner.create(8080)
-    .addPlugin(new PythonPlugin())
-    .start();
+VNodeRunner.create(8080).addPlugin(new PythonPlugin()).start();
+// → [PYTHON] Found: python3 → Python 3.12.4
+// → [PYTHON] uv found: uv 0.4.1
 ```
 
-```java
-// In any plugin:
-PythonRuntime python = ctx.getService(PythonRuntime.class).orElseThrow();
-python.createEnv("myapp");                     // creates .vatn/python/envs/myapp/
+Drop any [Pinokio](https://github.com/pinokiocomputer/pinokio)-format app into `.vatn/python/apps/<name>/pinokio.json` and run it:
 
-// Run a Pinokio script
-var script = PynokioScript.fromFile(appDir.resolve("pinokio.json"));
-new PynokioScriptRunner(python, procs, "myapp", appDir).run(script);
+```bash
+curl -X POST http://localhost:8080/python/apps/myapp/run
+# → {"status":"completed","stepsRun":3,"daemonProcessIds":["myapp-a1b2c3d4"]}
 ```
 
-**Script format** — Pinokio `run[]` JSON, same shape for all runtime plugins:
+**The `run[]` script format:**
+
 ```json
-{ "run": [
-    { "method": "shell.run", "params": { "message": "pip install flask", "venv": "myenv" } },
-    { "method": "shell.run", "params": { "message": "python app.py", "venv": "myenv",
-                                          "daemon": true, "autoRestart": true } }
-] }
+{
+  "run": [
+    { "method": "shell.run", "params": { "message": "uv pip install fastapi uvicorn",
+                                          "venv": "myapp" } },
+    { "method": "shell.run", "params": { "message": "uvicorn main:app --port 8001",
+                                          "venv": "myapp", "daemon": true, "autoRestart": true } }
+  ]
+}
 ```
 
-Package installer priority: `uv pip install` → `pip install` → `conda install`.
+**What's supported:** `shell.run` (with `venv`, `conda`, `env`, `daemon`, `autoRestart`), `fs.write`, `fs.read`, `local.set/get`, `script.return`, template interpolation (`{{id}}`).
 
-Admin UI at `GET /python/ui`. See [vatn-plugin-python/README.md](vatn-plugin-python/README.md) for full API and Pinokio compatibility table.
+**Package installer priority:** `uv pip install` → `pip install` → `conda install`
+
+**Admin UI:** `GET /python/ui` — process table, log streaming, venv management, one-click start/stop.
+
+**REST endpoints:** `/python/status` · `/python/envs` · `/python/apps` · `/python/apps/{name}/run` · `/python/processes/{id}/status` · `/python/processes/{id}/stop`
+
+See **[vatn-plugin-python/README.md](vatn-plugin-python/README.md)** for full script reference, curl examples, real-world scenarios (vllm, Gradio, Automatic1111), security model, and troubleshooting.
 
 ---
 
 ## Plugin detail: vatn-plugin-node
 
-Node.js process manager using the same `run[]` script format as the Python plugin. Runs any Node.js app — Express servers, CLI tools, workers — as a supervised VATN process.
+**Supervised Node.js runtime** — same `run[]` format as the Python plugin, npm/npx integration, and a live admin UI with Restart button.
 
 ```java
-VNodeRunner.create(8080)
-    .addPlugin(new NodePlugin())
-    .start();
+VNodeRunner.create(8080).addPlugin(new NodePlugin()).start();
+// → [NODE] Found: node → v22.4.0
+// → [NODE] npm: npm → 10.8.1
 ```
 
-```java
-// In any plugin:
-NodeRuntime node = ctx.getService(NodeRuntime.class).orElseThrow();
+Drop a `vatn-node.json` into `.vatn/node/apps/<name>/` and run it:
 
-// Run a vatn-node.json script
-var script = NodeScriptRunner.NodeScript.fromFile(appDir.resolve("vatn-node.json"));
-new NodeScriptRunner(node, procs, "myapp", appDir).run(script);
+```bash
+curl -X POST http://localhost:8080/node/apps/api-server/run
+# → {"status":"completed","stepsRun":3,"daemonProcessIds":["api-server-b3c4d5e6"]}
 ```
 
-**Script format** — same `run[]` JSON, Node.js-flavoured methods:
+**The `run[]` script format:**
+
 ```json
-{ "run": [
-    { "method": "npm.install",  "params": { "packages": ["express"] } },
+{
+  "run": [
+    { "method": "npm.install",  "params": { "packages": ["express", "dotenv"] } },
+    { "method": "fs.write",     "params": { "path": ".env", "data": "PORT=3001\n" } },
     { "method": "shell.run",    "params": { "message": "node server.js",
-                                             "daemon": true, "autoRestart": true } }
-] }
+                                             "daemon": true, "autoRestart": true,
+                                             "env": { "PORT": "3001" } } }
+  ]
+}
 ```
 
-Supports `npm.install`, `npx.run`, `shell.run` (daemon/autoRestart), `fs.write/read`, `local.set/get`. Auto-detects `node`, `npm`, `npx` binaries at startup.
+**What's supported:** `shell.run` (daemon/autoRestart), `npm.install`, `npx.run`, `fs.write/read`, `local.set/get`, `script.return`. Auto-detects `node`, `npm`, `npx`.
 
-Admin UI at `GET /node/ui`. See [vatn-plugin-node/README.md](vatn-plugin-node/README.md).
+**Admin UI:** `GET /node/ui` — process table with Restart button, log streaming, npm install controls.
+
+**REST endpoints:** `/node/status` · `/node/apps` · `/node/apps/{name}/install` · `/node/apps/{name}/run` · `/node/processes/{id}/status` · `/node/processes/{id}/stop` · `/node/processes/{id}/restart`
+
+See **[vatn-plugin-node/README.md](vatn-plugin-node/README.md)** for full reference, curl examples, real-world scenarios (Express, Next.js, workers), PM2 comparison, and troubleshooting.
 
 ---
 
