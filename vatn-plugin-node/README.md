@@ -3,7 +3,7 @@
 Sandboxed Node.js process management for VATN nodes — same `run[]` script format as `vatn-plugin-python`, supervised daemon processes with auto-restart, and a live admin UI with log streaming.
 
 > **Admin UI** → `GET /node/ui`  
-> **Runtime** → VATN 1.0-alpha.11+  
+> **Runtime** → VATN 1.0-alpha.12+  
 > **Script file** → `vatn-node.json` or `pinokio.json`
 
 ---

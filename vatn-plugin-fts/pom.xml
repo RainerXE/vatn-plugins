@@ -6,7 +6,7 @@
     <parent>
         <groupId>dev.vatn.plugins</groupId>
         <artifactId>vatn-plugins-parent</artifactId>
-        <version>1.0-alpha.11</version>
+        <version>1.0-alpha.12</version>
     </parent>
     <artifactId>vatn-plugin-fts</artifactId>
     <name>VATN Plugin — Full-Text Search</name>
@@ -21,5 +21,27 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.45.1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>
