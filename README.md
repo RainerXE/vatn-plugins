@@ -15,7 +15,7 @@ Each plugin implements `VNodePlugin` and is registered with `VNodeRunner.addPlug
 | [vatn-plugin-postgres](vatn-plugin-postgres/) | `vatn-plugin-postgres` | PostgreSQL connection pool via HikariCP. Registers `DataSourceService` and a `postgres` health check. |
 | [vatn-plugin-redis](vatn-plugin-redis/) | `vatn-plugin-redis` | Redis client via Jedis. Registers `RedisService` with get/set/del/expire/pub-sub. |
 | [vatn-plugin-mongodb](vatn-plugin-mongodb/) | `vatn-plugin-mongodb` | MongoDB sync driver. Registers `MongoService` giving access to collections and the `MongoDatabase`. |
-| [vatn-plugin-s3](vatn-plugin-s3/) | `vatn-plugin-s3` | S3-compatible object storage via AWS SDK v2. Supports AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces. Registers `S3Service` with upload/download/presign/delete. |
+| [vatn-plugin-s3](vatn-plugin-s3/) | `vatn-plugin-s3` | S3-compatible object storage via AWS SDK v2. Supports AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces. Registers `S3Service` (presign, streaming) **and** the standard `VBlobStore` SPI (content-addressing, range reads, dedup) — so backend-agnostic code works unchanged. |
 | [vatn-plugin-email](vatn-plugin-email/) | `vatn-plugin-email` | SMTP email via Jakarta Mail (Angus). Registers `EmailService` with plain-text and HTML send. Supports STARTTLS, SSL, and app passwords. |
 | [vatn-plugin-metrics](vatn-plugin-metrics/) | `vatn-plugin-metrics` | Prometheus metrics via Micrometer. Registers `MetricsService` (MeterRegistry) and exposes `GET /metrics` in Prometheus text format. Optional JVM metrics (GC, memory, threads, CPU). |
 
@@ -39,6 +39,7 @@ Each plugin implements `VNodePlugin` and is registered with `VNodeRunner.addPlug
 | Plugin | Artifact | What it does |
 |--------|----------|--------------|
 | [vatn-plugin-openai](vatn-plugin-openai/) | `vatn-plugin-openai` | LLM client for any OpenAI-compatible API. Registers `LlmService` with `complete()` and `chat()`. Supports OpenAI, Anthropic/Claude, Ollama, and any compatible endpoint. |
+| [vatn-plugin-fts](vatn-plugin-fts/) | `vatn-plugin-fts` | **Real full-text search** backed by SQLite FTS5 (BM25 ranking, snippets, prefix/phrase/boolean queries). Registers `FtsService` — no extra infrastructure, uses the node's existing database. See below. |
 | [vatn-plugin-scraper](vatn-plugin-scraper/) | `vatn-plugin-scraper` | HTML scraper backed by Jsoup. Fetches a list of URLs, extracts structured entries, and pipes results as NDJSON to a downstream VATN node via `VStream`. |
 | [vatn-plugin-indexer](vatn-plugin-indexer/) | `vatn-plugin-indexer` | Stream processor that receives a JSON stream, sorts entries by title, and relays them downstream. Designed as a pipeline stage between scraper and storage nodes. |
 
@@ -159,6 +160,79 @@ VNodeRunner.create(8080)
 ```
 
 Plugin load order follows registration order. Plugins that depend on a service registered by another plugin should be added after it.
+
+---
+
+## Plugin detail: vatn-plugin-fts
+
+Real full-text search without standing up Elasticsearch or Meilisearch. `vatn-plugin-fts` creates a single SQLite FTS5 virtual table in the node's existing database and exposes `FtsService`. FTS5 uses `porter unicode61` tokenisation (English stemming + Unicode normalisation) and BM25 relevance ranking with configurable column weights.
+
+```java
+VNodeRunner.create(8080)
+    .addPlugin(new FtsPlugin())
+    .addPlugin(new MyPlugin())
+    .start();
+```
+
+In your plugin:
+
+```java
+FtsService fts = ctx.getService(FtsService.class).orElseThrow();
+
+// Index documents — title is weighted 10× over body
+fts.index("books", "book-42", "The Left Hand of Darkness", "Ursula K. Le Guin — science fiction…");
+fts.index("books", "book-99", "The Dispossessed", "Anarchist utopian novel by Le Guin…");
+
+// FTS5 query syntax: terms, "exact phrases", prefix*, AND / OR / NOT, column:term
+List<FtsResult> hits = fts.search("ursula le guin", 10);
+List<FtsResult> inCol = fts.search("books", "title:darkness OR title:dispossessed", 10);
+
+// Each result carries docId, collection, score (higher = better), and a highlighted snippet
+hits.forEach(r -> System.out.printf("[%.2f] %s — %s%n", r.score(), r.docId(), r.snippet()));
+
+// Re-index (same docId replaces the previous entry) and delete
+fts.index("books", "book-42", updatedTitle, updatedBody);
+fts.delete("books", "book-42");
+
+// Batch-clear a collection
+fts.clear("drafts");
+
+// Count indexed documents
+long total = fts.count("books");
+```
+
+**Notes:**
+- Requires that the SQLite JDBC driver includes FTS5 (the standard `sqlite-jdbc` artifact does). If `CREATE VIRTUAL TABLE … USING fts5` throws, verify your SQLite build.
+- Malformed FTS5 query syntax (e.g. unbalanced quotes) returns an empty result list rather than propagating an exception — safe for user-supplied queries.
+- For cross-node search, index documents on each node and use `VRpcService` to fan out the query and merge results.
+
+---
+
+## Plugin detail: vatn-plugin-s3 — VBlobStore SPI
+
+In addition to the S3-specific `S3Service` (presign, streaming), `vatn-plugin-s3` now implements the standard `VBlobStore` SPI, making it a drop-in remote backend for any code that uses content-addressed or keyed blob storage:
+
+```java
+// Backend-agnostic code — works with the default local store OR vatn-plugin-s3
+VBlobStore blobs = ctx.getService(VBlobStore.class).orElseThrow();
+
+// Content-addressed write — deduplicates by SHA-256
+String hash = blobs.putContent(imageStream, "image/jpeg");   // → "sha256:ab12…"
+
+// Named write
+blobs.put("covers/42.jpg", jpegBytes, "image/jpeg");
+
+// Range read (HTTP range semantics)
+try (InputStream header = blobs.openRange("covers/42.jpg", 0, 64 * 1024)) { … }
+
+// List and delete
+blobs.list("covers/").forEach(System.out::println);
+blobs.delete("covers/old.jpg");
+```
+
+With `vatn-plugin-s3` loaded, `ctx.getService(VBlobStore.class)` returns the S3 implementation. Without it, it returns the runtime's local content-addressed cache (`~/.vatn/blobs`). No code change required when switching backends.
+
+**S3 key mapping:** named keys pass through unchanged; content-addressed keys (`sha256:<hex>`) are stored under `sha256/<hex>` in the bucket. Pin/evict are no-ops on S3 (use bucket lifecycle rules instead).
 
 ---
 
@@ -380,10 +454,13 @@ SecurityPlugin  →  CorsPlugin  →  AuthPlugin  →  PostgresPlugin  →  Metr
 PostgresPlugin  →  RedisPlugin  →  OpenAiPlugin  →  CommPlugin  →  YourBotPlugin
 ```
 
-### Data pipeline
+### Data pipeline with search
 
 ```java
-ScraperPlugin  →  IndexerPlugin  →  S3Plugin  →  MetricsPlugin
+ScraperPlugin  →  FtsPlugin  →  S3Plugin  →  MetricsPlugin
+// ScraperPlugin fetches pages and pushes to VTopic
+// FtsPlugin indexes titles/bodies for instant BM25 search
+// S3Plugin stores full blobs via VBlobStore (content-addressed, range reads)
 ```
 
 ### Federated social node

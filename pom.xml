@@ -16,6 +16,7 @@
         <module>vatn-plugin-auth</module>
         <module>vatn-plugin-security</module>
         <module>vatn-plugin-indexer</module>
+        <module>vatn-plugin-fts</module>
         <module>vatn-plugin-scraper</module>
         <module>vatn-plugin-openai</module>
         <module>vatn-plugin-metrics</module>
