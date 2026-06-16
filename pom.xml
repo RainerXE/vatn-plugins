@@ -36,6 +36,7 @@
         <module>vatn-plugin-wasm</module>
         <module>vatn-plugin-python</module>
         <module>vatn-plugin-node</module>
+        <module>vatn-plugin-devenv</module>
     </modules>
 
     <properties>
