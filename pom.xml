@@ -42,7 +42,7 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vatn.version>1.0-alpha.12</vatn.version>
+        <vatn.version>1.0-alpha.14</vatn.version>
         <!-- Chicory WASM runtime — single property to update when a new version ships -->
         <chicory.version>1.7.5</chicory.version>
         <jjwt.version>0.12.6</jjwt.version>
