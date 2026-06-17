@@ -5,5 +5,6 @@ package dev.vatn.plugins.devenv.model;
  * Order of specificity matters when detecting (see RuntimeScanner).
  */
 public enum RuntimeSource {
-    PATH, MISE, SDKMAN, NVM, PYENV, RBENV, ASDF, HOMEBREW, SYSTEM, XCODE, UNKNOWN
+    PATH, MISE, SDKMAN, NVM, PYENV, RBENV, ASDF, HOMEBREW, SYSTEM, XCODE,
+    CONDA, PYTHON_ORG, UNKNOWN
 }

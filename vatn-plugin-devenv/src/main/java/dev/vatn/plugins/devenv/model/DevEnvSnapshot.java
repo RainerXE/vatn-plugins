@@ -21,6 +21,8 @@ public record DevEnvSnapshot(
         String platform,
         List<RuntimeEntry> runtimes,
         List<RuntimeEntry> compilers,
+        List<JvmInstall> jvms,
+        List<RuntimeInstall> languageInstalls,
         List<VersionManager> versionManagers,
         PackageInventory packages,
         List<VenvEntry> venvs,
@@ -37,14 +39,15 @@ public record DevEnvSnapshot(
     /** A safe, empty snapshot for null-free handling before the first scan completes. */
     public static DevEnvSnapshot empty() {
         return new DevEnvSnapshot(SCHEMA_VERSION, Instant.EPOCH.toString(), "", platformString(),
-                List.of(), List.of(), List.of(), PackageInventory.empty(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), PackageInventory.empty(),
                 List.of(), ContainerInventory.empty(), KubernetesInfo.empty(),
                 List.of(), List.of(), List.of(), null);
     }
 
-    /** Runtimes + compilers + version managers, for {@code GET /devenv/runtimes}. */
+    /** Runtimes + compilers + JVMs + language installs + version managers, for {@code GET /devenv/runtimes}. */
     public Map<String, Object> runtimesSlice() {
-        return Map.of("runtimes", runtimes, "compilers", compilers, "versionManagers", versionManagers);
+        return Map.of("runtimes", runtimes, "compilers", compilers, "jvms", jvms,
+                "languageInstalls", languageInstalls, "versionManagers", versionManagers);
     }
 
     /** Coding agents + MCP servers, for {@code GET /devenv/agents}. */

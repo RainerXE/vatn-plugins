@@ -6,17 +6,21 @@ import dev.vatn.plugins.devenv.model.AgentEntry;
 import dev.vatn.plugins.devenv.model.AppleInfo;
 import dev.vatn.plugins.devenv.model.ContainerInventory;
 import dev.vatn.plugins.devenv.model.DevEnvSnapshot;
+import dev.vatn.plugins.devenv.model.JvmInstall;
 import dev.vatn.plugins.devenv.model.KubernetesInfo;
 import dev.vatn.plugins.devenv.model.McpEntry;
 import dev.vatn.plugins.devenv.model.PackageInventory;
 import dev.vatn.plugins.devenv.model.RuntimeEntry;
+import dev.vatn.plugins.devenv.model.RuntimeInstall;
 import dev.vatn.plugins.devenv.model.VenvEntry;
 import dev.vatn.plugins.devenv.model.VersionManager;
 import dev.vatn.plugins.devenv.scanner.AcceleratorScanner;
 import dev.vatn.plugins.devenv.scanner.AgentScanner;
 import dev.vatn.plugins.devenv.scanner.AppleScanner;
 import dev.vatn.plugins.devenv.scanner.ContainerScanner;
+import dev.vatn.plugins.devenv.scanner.JvmScanner;
 import dev.vatn.plugins.devenv.scanner.KubernetesScanner;
+import dev.vatn.plugins.devenv.scanner.LanguageRuntimeScanner;
 import dev.vatn.plugins.devenv.scanner.McpScanner;
 import dev.vatn.plugins.devenv.scanner.PackageManagerScanner;
 import dev.vatn.plugins.devenv.scanner.RuntimeScanner;
@@ -52,6 +56,8 @@ public final class DevEnvServiceImpl implements DevEnvService {
 
     private final DevEnvConfig config;
     private final RuntimeScanner runtimeScanner;
+    private final JvmScanner jvmScanner;
+    private final LanguageRuntimeScanner languageRuntimeScanner;
     private final VersionManagerScanner versionManagerScanner;
     private final PackageManagerScanner packageManagerScanner;
     private final VenvScanner venvScanner;
@@ -68,6 +74,8 @@ public final class DevEnvServiceImpl implements DevEnvService {
     public DevEnvServiceImpl(DevEnvConfig config, ScannerUtil util, VJson json) {
         this.config = config;
         this.runtimeScanner = new RuntimeScanner(util);
+        this.jvmScanner = new JvmScanner();
+        this.languageRuntimeScanner = new LanguageRuntimeScanner(util);
         this.versionManagerScanner = new VersionManagerScanner();
         this.packageManagerScanner = new PackageManagerScanner(util);
         this.venvScanner = new VenvScanner(util);
@@ -107,6 +115,8 @@ public final class DevEnvServiceImpl implements DevEnvService {
         Map<String, Callable<Object>> tasks = new LinkedHashMap<>();
         tasks.put("runtimes",        () -> runtimeScanner.scanRuntimes());
         tasks.put("compilers",       () -> runtimeScanner.scanCompilers());
+        tasks.put("jvms",            () -> jvmScanner.scan());
+        tasks.put("languageInstalls",() -> languageRuntimeScanner.scan());
         tasks.put("versionManagers", () -> versionManagerScanner.scan());
         tasks.put("packages",        () -> packageManagerScanner.scan());
         tasks.put("venvs",           () -> venvScanner.scan());
@@ -126,6 +136,8 @@ public final class DevEnvServiceImpl implements DevEnvService {
                 DevEnvSnapshot.platformString(),
                 entries(r.get("runtimes")),
                 entries(r.get("compilers")),
+                jvms(r.get("jvms")),
+                installs(r.get("languageInstalls")),
                 vms(r.get("versionManagers")),
                 r.get("packages") instanceof PackageInventory pi ? pi : PackageInventory.empty(),
                 venvs(r.get("venvs")),
@@ -137,11 +149,12 @@ public final class DevEnvServiceImpl implements DevEnvService {
                 r.get("apple") instanceof AppleInfo ai ? ai : null);
 
         last.set(snapshot);
-        log.info("DevEnv scan completed in {}ms — {} runtimes, {} compilers, {} venvs, {} containers, {} agents, {} mcp, {} accelerators",
+        log.info("DevEnv scan completed in {}ms — {} runtimes, {} compilers, {} JVMs, {} lang-installs, {} brew, {} npm, {} agents, {} mcp",
                 System.currentTimeMillis() - started, snapshot.runtimes().size(),
-                snapshot.compilers().size(), snapshot.venvs().size(),
-                snapshot.containers().containers().size(), snapshot.codingAgents().size(),
-                snapshot.mcpServers().size(), snapshot.accelerators().size());
+                snapshot.compilers().size(), snapshot.jvms().size(),
+                snapshot.languageInstalls().size(),
+                snapshot.packages().brewFormulae().size(), snapshot.packages().npmGlobals().size(),
+                snapshot.codingAgents().size(), snapshot.mcpServers().size());
         return snapshot;
     }
 
@@ -210,6 +223,16 @@ public final class DevEnvServiceImpl implements DevEnvService {
     @SuppressWarnings("unchecked")
     private static List<VersionManager> vms(Object o) {
         return o instanceof List<?> list ? (List<VersionManager>) list : List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<JvmInstall> jvms(Object o) {
+        return o instanceof List<?> list ? (List<JvmInstall>) list : List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<RuntimeInstall> installs(Object o) {
+        return o instanceof List<?> list ? (List<RuntimeInstall>) list : List.of();
     }
 
     @SuppressWarnings("unchecked")

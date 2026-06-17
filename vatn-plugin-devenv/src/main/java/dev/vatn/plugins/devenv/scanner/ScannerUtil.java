@@ -48,7 +48,11 @@ public final class ScannerUtil {
             if (proc != null) {
                 VProcessService.VProcessResult r =
                         proc.execute(List.of(command), Map.of(), null, VTrustLevel.RESTRICTED);
+                // Many tools print --version to stderr (java -version, swift, old python); on a
+                // successful exit, fall back to stderr when stdout is empty. (On failure, stderr
+                // is an error message, not output — keep treating it as "not found".)
                 String out = r.stdout();
+                if ((out == null || out.isBlank()) && r.exitCode() == 0) out = r.stderr();
                 if (r.exitCode() != 0 && (out == null || out.isBlank())) {
                     return Optional.empty();
                 }
