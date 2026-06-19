@@ -1,7 +1,6 @@
 package dev.vatn.plugins.devenv.scanner;
 
 import dev.vatn.api.VProcessService;
-import dev.vatn.api.security.VTrustLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +45,10 @@ public final class ScannerUtil {
     public Optional<String> exec(String... command) {
         try {
             if (proc != null) {
-                VProcessService.VProcessResult r =
-                        proc.execute(List.of(command), Map.of(), null, VTrustLevel.RESTRICTED);
+                // Trusted, read-only version/capability probe of a fixed binary allow-list.
+                // Uses VProcessService.probe() (unsandboxed) because the OS sandbox blocks tools
+                // like swift/xcrun and brew that need broad read access (DCN-DEV-11).
+                VProcessService.VProcessResult r = proc.probe(List.of(command));
                 // Many tools print --version to stderr (java -version, swift, old python); on a
                 // successful exit, fall back to stderr when stdout is empty. (On failure, stderr
                 // is an error message, not output — keep treating it as "not found".)
