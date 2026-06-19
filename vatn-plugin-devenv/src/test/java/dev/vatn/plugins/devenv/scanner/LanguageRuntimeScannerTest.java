@@ -22,6 +22,13 @@ class LanguageRuntimeScannerTest {
     }
 
     @Test
+    void derivesRubyDistribution() {
+        assertEquals("CRuby", LanguageRuntimeScanner.rubyDist("/Users/x/.rbenv/versions/3.3.0"));
+        assertEquals("JRuby", LanguageRuntimeScanner.rubyDist("/Users/x/.rbenv/versions/jruby-9.4.5.0"));
+        assertEquals("TruffleRuby", LanguageRuntimeScanner.rubyDist("truffleruby-24.0.0"));
+    }
+
+    @Test
     void parsesSwiftVersion() {
         assertEquals("6.2.4", LanguageRuntimeScanner.parseSwiftVersion(
                 "swift-driver version: 1.127.15 Apple Swift version 6.2.4 (swiftlang-6.2.4.1.4 clang-1700.6.4.2)"));
