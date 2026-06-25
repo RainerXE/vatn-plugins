@@ -8,6 +8,7 @@ import dev.vatn.plugins.devenv.model.ContainerInventory;
 import dev.vatn.plugins.devenv.model.DevEnvSnapshot;
 import dev.vatn.plugins.devenv.model.JvmInstall;
 import dev.vatn.plugins.devenv.model.KubernetesInfo;
+import dev.vatn.plugins.devenv.model.LlmInventory;
 import dev.vatn.plugins.devenv.model.McpEntry;
 import dev.vatn.plugins.devenv.model.PackageInventory;
 import dev.vatn.plugins.devenv.model.RuntimeEntry;
@@ -21,6 +22,7 @@ import dev.vatn.plugins.devenv.scanner.ContainerScanner;
 import dev.vatn.plugins.devenv.scanner.JvmScanner;
 import dev.vatn.plugins.devenv.scanner.KubernetesScanner;
 import dev.vatn.plugins.devenv.scanner.LanguageRuntimeScanner;
+import dev.vatn.plugins.devenv.scanner.LlmScanner;
 import dev.vatn.plugins.devenv.scanner.McpScanner;
 import dev.vatn.plugins.devenv.scanner.PackageManagerScanner;
 import dev.vatn.plugins.devenv.scanner.RuntimeScanner;
@@ -65,6 +67,7 @@ public final class DevEnvServiceImpl implements DevEnvService {
     private final KubernetesScanner kubernetesScanner;
     private final AgentScanner agentScanner;
     private final McpScanner mcpScanner;
+    private final LlmScanner llmScanner;
     private final AppleScanner appleScanner;
     private final AcceleratorScanner acceleratorScanner;
 
@@ -83,6 +86,7 @@ public final class DevEnvServiceImpl implements DevEnvService {
         this.kubernetesScanner = new KubernetesScanner(util);
         this.agentScanner = new AgentScanner(util);
         this.mcpScanner = new McpScanner(json);
+        this.llmScanner = new LlmScanner(util, json);
         this.appleScanner = new AppleScanner(util);
         this.acceleratorScanner = new AcceleratorScanner(util);
     }
@@ -124,6 +128,7 @@ public final class DevEnvServiceImpl implements DevEnvService {
         tasks.put("kubernetes",      () -> kubernetesScanner.scan());
         tasks.put("agents",          () -> agentScanner.scan());
         tasks.put("mcp",             () -> mcpScanner.scan());
+        tasks.put("llm",             () -> llmScanner.scan());
         tasks.put("accelerators",    () -> acceleratorScanner.scan());
         tasks.put("apple",           () -> appleScanner.scan());
 
@@ -145,16 +150,17 @@ public final class DevEnvServiceImpl implements DevEnvService {
                 r.get("kubernetes") instanceof KubernetesInfo ki ? ki : KubernetesInfo.empty(),
                 agents(r.get("agents")),
                 mcps(r.get("mcp")),
+                r.get("llm") instanceof LlmInventory inv ? inv : LlmInventory.empty(),
                 accelerators(r.get("accelerators")),
                 r.get("apple") instanceof AppleInfo ai ? ai : null);
 
         last.set(snapshot);
-        log.info("DevEnv scan completed in {}ms — {} runtimes, {} compilers, {} JVMs, {} lang-installs, {} brew, {} npm, {} agents, {} mcp",
+        log.info("DevEnv scan completed in {}ms — {} runtimes, {} JVMs, {} lang-installs, {} brew, {} npm, {} agents, {} mcp, {} llm-engines/{} models",
                 System.currentTimeMillis() - started, snapshot.runtimes().size(),
-                snapshot.compilers().size(), snapshot.jvms().size(),
-                snapshot.languageInstalls().size(),
+                snapshot.jvms().size(), snapshot.languageInstalls().size(),
                 snapshot.packages().brewFormulae().size(), snapshot.packages().npmGlobals().size(),
-                snapshot.codingAgents().size(), snapshot.mcpServers().size());
+                snapshot.codingAgents().size(), snapshot.mcpServers().size(),
+                snapshot.llm().engines().size(), snapshot.llm().models().size());
         return snapshot;
     }
 

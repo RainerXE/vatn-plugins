@@ -30,6 +30,7 @@ public record DevEnvSnapshot(
         KubernetesInfo kubernetes,
         List<AgentEntry> codingAgents,
         List<McpEntry> mcpServers,
+        LlmInventory llm,
         List<AcceleratorEntry> accelerators,
         AppleInfo apple) {
 
@@ -41,7 +42,7 @@ public record DevEnvSnapshot(
         return new DevEnvSnapshot(SCHEMA_VERSION, Instant.EPOCH.toString(), "", platformString(),
                 List.of(), List.of(), List.of(), List.of(), List.of(), PackageInventory.empty(),
                 List.of(), ContainerInventory.empty(), KubernetesInfo.empty(),
-                List.of(), List.of(), List.of(), null);
+                List.of(), List.of(), LlmInventory.empty(), List.of(), null);
     }
 
     /** Runtimes + compilers + JVMs + language installs + version managers, for {@code GET /devenv/runtimes}. */

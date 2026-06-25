@@ -32,6 +32,7 @@ final class DevEnvHttpService implements VHttpService {
         routes.get("/containers", this::handleContainers);
         routes.get("/kubernetes", this::handleKubernetes);
         routes.get("/agents", this::handleAgents);
+        routes.get("/llm", this::handleLlm);
         routes.get("/accelerators", this::handleAccelerators);
         routes.get("/apple", this::handleApple);
         routes.get("/health", this::handleHealth);
@@ -72,6 +73,10 @@ final class DevEnvHttpService implements VHttpService {
 
     private void handleAgents(VHttpRequest req, VHttpResponse res) {
         res.sendJson(json.stringify(svc.snapshotOrScan().agentsSlice()));
+    }
+
+    private void handleLlm(VHttpRequest req, VHttpResponse res) {
+        res.sendJson(json.stringify(svc.snapshotOrScan().llm()));
     }
 
     private void handleAccelerators(VHttpRequest req, VHttpResponse res) {
